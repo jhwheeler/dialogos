@@ -34,6 +34,12 @@ src/
         create-one.ts
         update-one.ts
         delete-one.ts
+    api/
+      widget/
+        get-one.ts
+        create-one.ts
+        update-one.ts
+        delete-one.ts
 ```
 
 Example barrels:
@@ -46,6 +52,12 @@ export * from "./update-one";
 export * from "./delete-one";
 
 // src/types/service/widget/index.ts
+export * from "./get-one";
+export * from "./create-one";
+export * from "./update-one";
+export * from "./delete-one";
+
+// src/types/api/widget/index.ts
 export * from "./get-one";
 export * from "./create-one";
 export * from "./update-one";
@@ -87,6 +99,26 @@ export const GetOneWidgetDataSourceOutputSchema = z.object({
 export type GetOneWidgetDataSourceOutput = z.infer<
   typeof GetOneWidgetDataSourceOutputSchema
 >;
+```
+
+
+Example (`src/types/api/widget/get-one.ts`):
+
+```ts
+import { z } from "zod";
+
+export const GetOneWidgetApiInputSchema = z.object({
+  widgetId: z.string().uuid(),
+});
+
+export type GetOneWidgetApiInput = z.infer<typeof GetOneWidgetApiInputSchema>;
+
+export const GetOneWidgetApiOutputSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+});
+
+export type GetOneWidgetApiOutput = z.infer<typeof GetOneWidgetApiOutputSchema>;
 ```
 
 ## DataSource example (Prisma CRUD)
@@ -249,32 +281,28 @@ Pattern requirements:
 
 ## API route pattern (auth → validate input → service → validate output)
 
+API schemas and types are defined in the API type layer (`src/types/api/<namespace>`), not inline in route files.
+
 ```ts
-import { z } from "zod";
 import type { FastifyPluginAsync } from "fastify";
 import { WidgetService } from "../../services/widget/widget.service";
+import {
+  GetOneWidgetApiInputSchema,
+  GetOneWidgetApiOutputSchema,
+} from "../../types/api/widget";
 import { ApiError } from "../../errors/api-error";
-
-const GetWidgetParamsSchema = z.object({
-  widgetId: z.string().uuid(),
-});
-
-const GetWidgetResponseSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-});
 
 export const widgetRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/widgets/:widgetId", async (request, reply) => {
     await fastify.authenticate(request, reply);
 
-    const inputValidation = GetWidgetParamsSchema.safeParse(request.params);
+    const inputValidation = GetOneWidgetApiInputSchema.safeParse(request.params);
 
     if (!inputValidation.success) {
       throw ApiError.validation("Invalid widgetId", inputValidation.error);
     }
 
-    const widgetService = new WidgetService(fastify.widgetDataSource);
+    const outputValidation = GetOneWidgetApiOutputSchema.safeParse(serviceOutput);
     const serviceOutput = await widgetService.getOne({
       id: inputValidation.data.widgetId,
     });
@@ -340,6 +368,7 @@ export class ApiError extends Error {
 - Define per-operation type files in kebab case.
 - Export both Zod schema and `z.infer` type.
 - Add namespace+layer barrels and import from those barrels.
+- Keep API input/output schemas in API type files (no inline route schemas).
 - Keep DataSource methods Prisma-only and parameter name `input`.
 - Keep Service logic in service classes.
 - Add mapper transformations only where needed.
