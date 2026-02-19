@@ -13,6 +13,7 @@
 - Audio-first UX and source-grounded sessions.
 
 ## AI collaboration
+- For backend implementation patterns and examples, follow `docs/BACKEND_ARCHITECTURE.md`.
 - Start with `AGENTS.md` and docs in `docs/`.
 - Use repo skills in `skills/` for repeatable patterns.
 - Preserve anti-offloading constraints: AI challenges form, student provides substance.

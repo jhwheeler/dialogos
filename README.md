@@ -33,3 +33,4 @@ Dialogos is a voice-first oral practice app that enforces Socratic, trivium-orie
 - Technical spec baseline: `docs/TECH_SPEC.md`
 - Build and run guide: `docs/BUILD.md`
 - Development workflow: `docs/WORKFLOW.md`
+- Backend architecture guide: `docs/BACKEND_ARCHITECTURE.md`
