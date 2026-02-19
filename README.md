@@ -1,6 +1,8 @@
 # Dialogos Backend
 
-Initial backend foundation for Dialogos v0.1 using Fastify + TypeScript + Prisma.
+Backend foundation for Dialogos v0.1.
+
+Dialogos is a voice-first oral practice app that enforces Socratic, trivium-oriented learning constraints.
 
 ## Quick start
 
@@ -24,3 +26,10 @@ Initial backend foundation for Dialogos v0.1 using Fastify + TypeScript + Prisma
 ## Current endpoints
 
 - `GET /v1/health`
+
+## Docs
+
+- Product overview: `docs/PRODUCT.md`
+- Technical spec baseline: `docs/TECH_SPEC.md`
+- Build and run guide: `docs/BUILD.md`
+- Development workflow: `docs/WORKFLOW.md`
