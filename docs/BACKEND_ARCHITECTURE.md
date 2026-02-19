@@ -36,6 +36,22 @@ src/
         delete-one.ts
 ```
 
+Example barrels:
+
+```ts
+// src/types/data-source/widget/index.ts
+export * from "./get-one";
+export * from "./create-one";
+export * from "./update-one";
+export * from "./delete-one";
+
+// src/types/service/widget/index.ts
+export * from "./get-one";
+export * from "./create-one";
+export * from "./update-one";
+export * from "./delete-one";
+```
+
 Rules:
 
 - File name is operation in kebab case (`get-one.ts`).
@@ -44,6 +60,8 @@ Rules:
   - `<Operation><Namespace><Layer>Input`
 - Output follows same rule with `OutputSchema` / `Output`.
 - Types are built with `z.infer<typeof Schema>`.
+- Create an `index.ts` barrel per namespace + layer (for example `src/types/data-source/widget/index.ts`).
+- Import operation types from that namespace barrel, not one file per operation and not a global root barrel.
 
 Example (`src/types/data-source/widget/get-one.ts`):
 
@@ -74,13 +92,7 @@ export type GetOneWidgetDataSourceOutput = z.infer<
 ## DataSource example (Prisma CRUD)
 
 ```ts
-import type { PrismaClient } from "@prisma/client";
-import type {
-  CreateOneWidgetDataSourceInput,
-  CreateOneWidgetDataSourceOutput,
-} from "../../types/data-source/widget/create-one";
-import type {
-  DeleteOneWidgetDataSourceInput,
+} from "../../types/data-source/widget";
   DeleteOneWidgetDataSourceOutput,
 } from "../../types/data-source/widget/delete-one";
 import type {
@@ -145,19 +157,13 @@ Service type files mirror DataSource type files, but may shape different contrac
 import type {
   CreateOneWidgetServiceInput,
   CreateOneWidgetServiceOutput,
-} from "../../types/service/widget/create-one";
-import type {
   DeleteOneWidgetServiceInput,
   DeleteOneWidgetServiceOutput,
-} from "../../types/service/widget/delete-one";
-import type {
   GetOneWidgetServiceInput,
   GetOneWidgetServiceOutput,
-} from "../../types/service/widget/get-one";
-import type {
   UpdateOneWidgetServiceInput,
   UpdateOneWidgetServiceOutput,
-} from "../../types/service/widget/update-one";
+} from "../../types/service/widget";
 import { NotFoundError } from "../../errors/not-found-error";
 import { WidgetDataSource } from "../../data-sources/widget/widget.data-source";
 import { WidgetMapper } from "../../mappers/widget.mapper";
@@ -216,8 +222,8 @@ export class WidgetService {
 Use mapper functions when contracts differ across layers.
 
 ```ts
-import type { GetOneWidgetDataSourceOutput } from "../types/data-source/widget/get-one";
-import type { GetOneWidgetServiceOutput } from "../types/service/widget/get-one";
+import type { GetOneWidgetDataSourceOutput } from "../types/data-source/widget";
+import type { GetOneWidgetServiceOutput } from "../types/service/widget";
 
 export class WidgetMapper {
   public static readonly getOne = {
@@ -333,6 +339,7 @@ export class ApiError extends Error {
 
 - Define per-operation type files in kebab case.
 - Export both Zod schema and `z.infer` type.
+- Add namespace+layer barrels and import from those barrels.
 - Keep DataSource methods Prisma-only and parameter name `input`.
 - Keep Service logic in service classes.
 - Add mapper transformations only where needed.
