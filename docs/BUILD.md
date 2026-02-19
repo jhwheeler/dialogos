@@ -17,7 +17,7 @@
   - Every push to any branch (`push`)
   - Pull request updates (`pull_request` opened/synchronize/reopened)
 - Build steps:
-  1. `npm install`
+  1. `npm ci`
   2. `npm run prisma:generate`
   3. `npm run build`
 - Deployment strategy:
