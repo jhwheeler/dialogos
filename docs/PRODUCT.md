@@ -507,6 +507,59 @@ A guided 10-minute sequence:
 5. **Short sessions** (high repeatability)
 6. **Rhythmic flow** (stable session pattern, flexible content)
 7. **Formative, not factory-style assessment**
+8. **Predictable, transparent cost** (the student should always know what a session costs and what they get for it)
+
+---
+
+## Instrumentation and Progress
+
+Practice without visibility into progress is just repetition. The app should give the student honest, structured signals about how their practice is developing — without turning into a gamified dashboard.
+
+### What we measure (per session)
+
+- Turn count
+- Session duration
+- Rubric scores (Clarity, Definitions, Structure, Objection-handling, Drift)
+- Prompt types triggered (distribution of grammar / logic / rhetoric moves)
+- Detected issues (frequency of vague terms, missing premises, equivocation, drift, etc.)
+- Latency (response time between prompt and student speech — a rough proxy for fluency)
+
+### What we measure (across sessions, per topic)
+
+- Rubric score trends over time
+- Shift in issue distribution (e.g., fewer vague-term flags, more objection-handling)
+- Session frequency and consistency (practice rhythm)
+- Definition clarity trend (are definitions getting tighter?)
+
+### What the student sees
+
+- Per-session: rubric scores with evidence snippets (already in artifacts)
+- Across sessions: simple trend lines or deltas ("Definitions improved over last 5 sessions", "Drift decreased")
+- No leaderboards, no points, no streaks-as-gamification
+- Framing should feel like a coach's logbook, not a fitness app
+
+### Product principle
+
+Progress signals should be **descriptive, not evaluative**. "You defined terms in 4 out of 6 turns" is useful. "Great improvement!" is not. This is consistent with the anti-sycophancy rule — the data speaks, the app doesn't editorialize.
+
+### MVP scope
+
+For v0.1, store all per-session metrics in structured form. Surface only the per-session rubric in the review screen. Cross-session trend views are a near-term follow-up, not MVP.
+
+---
+
+## Cost Transparency
+
+General-purpose AI chat products have opaque pricing and usage limits. The student has no idea what a conversation "costs" or when they'll hit a wall.
+
+Dialogos should be the opposite:
+
+- **Predictable session cost**: the student knows before starting roughly what a session will cost (or how much trial time it uses).
+- **Visible caps**: trial remaining time, session limits, and plan allowances are always visible — not buried in settings.
+- **Graceful session end**: when a cap is reached, the session ends cleanly with artifacts generated, not mid-sentence.
+- **Fair pricing**: the goal is cheap and accessible. A serious autodidact practicing daily should be able to afford it without thinking twice.
+
+This is a product differentiator, not just a billing concern. Transparent, predictable cost makes practice habitual. Opaque cost makes people hesitate.
 
 ---
 

@@ -170,6 +170,8 @@ Generated at end of session (and optionally mid-session).
 
 ## 4) Socrates Mode: behavioral contract
 
+These are not aspirational instructions to the model. They are **mechanical guarantees** enforced by server-side validation. The model is one component; the enforcement layer is what turns tone guidance into a reliable contract.
+
 ### 4.1 Output schema (strict)
 
 All model outputs used for prompting MUST validate against this JSON schema:
@@ -183,7 +185,7 @@ All model outputs used for prompting MUST validate against this JSON schema:
 }
 ```
 
-Only `next_prompt` is spoken to the student.
+Only `next_prompt` is spoken to the student. All other fields are stored for instrumentation and artifact generation but never surfaced during the session.
 
 ### 4.2 Style constraints
 
@@ -196,7 +198,19 @@ Hard rules (enforced by server-side validation + regeneration):
 - Default `next_prompt` word count ≤ 12 (configurable to 16 max; keep it tight).
 - No rhetorical flourishes; neutral, direct.
 
-### 4.3 Prompting strategy
+### 4.3 Enforcement loop
+
+Every model response goes through a validation pipeline before reaching the student:
+
+1. **Schema validation** — response must parse against the strict JSON schema. If not, regenerate (up to 2 retries, then fail the turn gracefully).
+2. **Word cap check** — count words in `next_prompt`. If over limit, regenerate.
+3. **Banned-phrase scan** — run `next_prompt` against the praise/padding blocklist. If match, regenerate.
+4. **Sentence count check** — `next_prompt` must contain exactly one sentence. If not, regenerate.
+5. **TTS gate** — only the `next_prompt` field is sent to TTS / spoken aloud. No other field is ever surfaced to the student during the session.
+
+This pipeline is the difference between "we asked the model to behave" and "the system guarantees it." A general chat UI cannot enforce this; the enforcement layer is a core product requirement.
+
+### 4.4 Prompting strategy
 
 - Run model in **structured output mode**.
 - Keep conversation context minimal:
@@ -536,12 +550,71 @@ MVP approach: generate TTS on-demand in client from `assistantText` OR server ge
   - small `max_output_tokens`
   - minimal context window
   - forbid "assistant essays" by schema validation
+- Student-facing cost visibility:
+  - trial time remaining is always visible in the UI
+  - before starting a session, show estimated cost or trial time that will be used
+  - on session end (including cap-triggered end), always generate artifacts before closing — never cut off mid-session without a clean exit
 
 ---
 
-## 11) Transcript format (screenplay)
+## 11) Session instrumentation
 
-### 11.1 Example
+### 11.1 Why this matters
+
+Structured metrics are what separate a training system from a chat log. The enforcement layer (Section 4) already produces structured metadata per turn (`prompt_type`, `detected_issue`). Instrumentation aggregates this into signals the student and the system can use.
+
+### 11.2 Per-session metrics (stored on session end)
+
+Computed from turns and artifacts when a session transitions to `ENDED`:
+
+- `turnCount` (int)
+- `durationSeconds` (int, `endedAt - startedAt`)
+- `promptTypeDistribution` (JSON object: `{ define: 3, distinguish: 1, objection: 2, ... }`)
+- `detectedIssueDistribution` (JSON object: `{ vague_term: 2, drift: 1, none: 4, ... }`)
+- `rubricScores` (from artifact: Clarity, Definitions, Structure, Objection-handling, Drift — each 1–5)
+- `avgResponseLatencyMs` (mean of per-turn latency — rough fluency proxy)
+
+### 11.3 Storage
+
+Add a `session_metrics` table or store as JSON on the session row:
+
+```sql
+create table session_metrics (
+  id uuid primary key,
+  session_id uuid not null references sessions(id) unique,
+  turn_count int not null,
+  duration_seconds int not null,
+  prompt_type_distribution jsonb not null,
+  detected_issue_distribution jsonb not null,
+  rubric_scores jsonb not null,
+  avg_response_latency_ms int,
+  created_at timestamptz not null default now()
+);
+```
+
+Populated by the `RENDER_ARTIFACTS` job (which already has access to all turns).
+
+### 11.4 Cross-session queries (post-MVP, but schema-ready now)
+
+With per-session metrics stored in structured form, cross-session trend queries become straightforward:
+
+- rubric score deltas per topic over last N sessions
+- issue distribution shift (e.g., fewer `vague_term` flags over time)
+- session frequency / consistency
+- definition clarity trend (ratio of `define`/`distinguish` prompts to `vague_term` issues)
+
+These power the progress signals described in PRODUCT.md. For v0.1, store the data; surface only per-session rubric in the review screen.
+
+### 11.5 API
+
+- `GET /v1/sessions/:sessionId/metrics` — returns per-session metrics
+- `GET /v1/topics/:topicId/metrics` (post-MVP) — returns aggregated trend data
+
+---
+
+## 12) Transcript format (screenplay)
+
+### 12.1 Example
 
 ```
 STUDENT: A cause is...
@@ -551,7 +624,7 @@ DIALOGOS: Distinguish material from formal cause.
 ...
 ```
 
-### 11.2 Rendering rules
+### 12.2 Rendering rules
 
 - Always left-aligned.
 - `STUDENT:` and `DIALOGOS:` labels.
@@ -559,9 +632,9 @@ DIALOGOS: Distinguish material from formal cause.
 
 ---
 
-## 12) Session summary format
+## 13) Session summary format
 
-### 12.1 Summary object
+### 13.1 Summary object
 
 - `one_paragraph_summary`
 - `grammar_notes[]`
@@ -570,7 +643,7 @@ DIALOGOS: Distinguish material from formal cause.
 - `open_questions[]`
 - `rubric_scores`
 
-### 12.2 Rubric
+### 13.2 Rubric
 
 Scores 1–5 with one-line evidence:
 
@@ -586,14 +659,14 @@ Rules:
 
 ---
 
-## 13) Privacy & deletion
+## 14) Privacy & deletion
 
-### 13.1 Delete topic/session
+### 14.1 Delete topic/session
 
 Soft-delete and hide from UI.
 Queue hard-delete (audio/files/artifacts) within a retention window (define later).
 
-### 13.2 Delete account
+### 14.2 Delete account
 
 - Soft-delete student record
 - cascade soft-delete all related records
@@ -601,7 +674,7 @@ Queue hard-delete (audio/files/artifacts) within a retention window (define late
   - delete storage objects
   - delete DB rows (or anonymize) per policy
 
-### 13.3 Export
+### 14.3 Export
 
 Bundle:
 
@@ -613,9 +686,9 @@ Bundle:
 
 ---
 
-## 14) Mobile (Flutter) client architecture
+## 15) Mobile (Flutter) client architecture
 
-### 14.1 Layers
+### 15.1 Layers
 
 1) API clients (pure HTTP):
 - `TopicApiClient`
@@ -636,13 +709,13 @@ Bundle:
 - SessionReviewScreen
 - AccountSettingsScreen
 
-### 14.2 Suggested state management
+### 15.2 Suggested state management
 
 Pick one and stay consistent:
 
 - Riverpod (recommended for modularity) OR Bloc.
 
-### 14.3 Session loop (client)
+### 15.3 Session loop (client)
 
 - Record audio
 - Upload audio via presigned URL
@@ -653,7 +726,7 @@ Pick one and stay consistent:
 
 ---
 
-## 15) Implementation plan (phased)
+## 16) Implementation plan (phased)
 
 ### Phase 0: foundations
 
@@ -685,7 +758,7 @@ Pick one and stay consistent:
 
 ---
 
-## 16) Testing requirements
+## 17) Testing requirements
 
 - Unit tests for Services (state transitions, caps)
 - Contract tests for API (OpenAPI snapshot)
@@ -695,7 +768,7 @@ Pick one and stay consistent:
 
 ---
 
-## 17) Open questions (explicitly tracked)
+## 18) Open questions (explicitly tracked)
 
 - Do we do device TTS or server TTS for v0.1?
 - Do we support streaming (websocket) or polling for prompt readiness?
