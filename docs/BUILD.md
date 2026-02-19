@@ -11,7 +11,22 @@
 - Mobile client: Flutter
 - Storage: Supabase Storage or S3-compatible storage
 
+## CI/CD (GitHub Actions)
+- Workflow file: `.github/workflows/ci-cd.yml`
+- Triggers:
+  - Every push to any branch (`push`)
+  - Pull request updates (`pull_request` opened/synchronize/reopened)
+- Build steps:
+  1. `npm ci`
+  2. `npm run prisma:generate`
+  3. `npm run build`
+- Deployment strategy:
+  - Built files from `dist/` are published to a dedicated `deployments` branch.
+  - Push builds are published at `branches/<branch-name>`.
+  - PR builds are published at `previews/pr-<number>`.
+  - This gives each PR an isolated deploy-preview path while preserving branch deployments.
+
 ## Future additions
-- Production build/deploy steps
-- CI pipeline details
+- Production infrastructure deploy (e.g., cloud runtime + secrets)
+- CI test suite once backend tests are added
 - Local queue worker startup instructions

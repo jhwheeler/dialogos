@@ -1,0 +1,79 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+  deploy:
+    name: Deploy Preview
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Compute deploy path
+        id: deploy_path
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "target=previews/pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+            echo "label=PR #${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          else
+            safe_branch=$(echo "${{ github.ref_name }}" | tr '/_' '--')
+            echo "target=branches/${safe_branch}" >> "$GITHUB_OUTPUT"
+            echo "label=branch ${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish build to deployments branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: deployments
+          publish_dir: dist
+          destination_dir: ${{ steps.deploy_path.outputs.target }}
+          keep_files: true
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
+          commit_message: >-
+            deploy: ${{ steps.deploy_path.outputs.label }} @ ${{ github.sha }}
