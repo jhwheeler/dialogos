@@ -1,6 +1,13 @@
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
+import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
 import Fastify from "fastify";
+import {
+  serializerCompiler,
+  validatorCompiler,
+  jsonSchemaTransform,
+} from "fastify-type-provider-zod";
 
 import { healthRoutes } from "./api/v1/health.routes.js";
 import { authRoutes } from "./api/v1/auth.routes.js";
@@ -21,10 +28,35 @@ export function buildApp() {
 
   const app = Fastify({ logger: loggerConfig });
 
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
+
   registerErrorHandler(app);
 
   app.register(cors, { origin: true });
   app.register(sensible);
+
+  app.register(swagger, {
+    openapi: {
+      info: {
+        title: "Dialogos API",
+        version: "0.1.0",
+      },
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: "http",
+            scheme: "bearer",
+            bearerFormat: "JWT",
+          },
+        },
+      },
+    },
+    transform: jsonSchemaTransform,
+  });
+
+  app.register(swaggerUi, { routePrefix: "/docs" });
+
   app.register(containerPlugin, { container });
   app.register(authPlugin, { jwtSecret: env.JWT_SECRET });
 

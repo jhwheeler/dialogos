@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { signToken } from "../../lib/jwt.js";
 import { ApiError } from "../../errors/api-error.js";
@@ -14,17 +15,23 @@ const DevTokenBodySchema = z.object({
   studentId: z.string().uuid(),
 });
 
-export async function authRoutes(app: FastifyInstance): Promise<void> {
+const DevTokenOutputSchema = z.object({
+  accessToken: z.string(),
+});
+
+export async function authRoutes(fastify: FastifyInstance): Promise<void> {
+  const app = fastify.withTypeProvider<ZodTypeProvider>();
+
   if (process.env.NODE_ENV !== "production") {
-    app.post("/auth/dev-token", async (request, reply) => {
-      const validation = DevTokenBodySchema.safeParse(request.body);
-
-      if (!validation.success) {
-        throw ApiError.validation("Invalid request body", validation.error);
-      }
-
+    app.post("/auth/dev-token", {
+      schema: {
+        tags: ["Auth"],
+        body: DevTokenBodySchema,
+        response: { 200: DevTokenOutputSchema },
+      },
+    }, async (request, reply) => {
       const token = await signToken(
-        { studentId: validation.data.studentId },
+        { studentId: request.body.studentId },
         app.container.env.JWT_SECRET,
       );
 
@@ -32,18 +39,18 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     });
   }
 
-  app.post("/auth/token", async (request, reply) => {
-    const inputValidation = TokenExchangeApiInputSchema.safeParse(request.body);
-
-    if (!inputValidation.success) {
-      throw ApiError.validation("Invalid request body", inputValidation.error);
-    }
-
-    const identityProvider = getIdentityProvider(inputValidation.data.provider, app.container.env);
+  app.post("/auth/token", {
+    schema: {
+      tags: ["Auth"],
+      body: TokenExchangeApiInputSchema,
+      response: { 200: TokenExchangeApiOutputSchema },
+    },
+  }, async (request, reply) => {
+    const identityProvider = getIdentityProvider(request.body.provider, app.container.env);
 
     let identity;
     try {
-      identity = await identityProvider.verify(inputValidation.data.identityToken);
+      identity = await identityProvider.verify(request.body.identityToken);
     } catch (error) {
       if (error instanceof AuthenticationError) {
         throw ApiError.authentication(error.message);
@@ -60,7 +67,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
     const accessToken = await signToken({ studentId: student.id }, app.container.env.JWT_SECRET);
 
-    const outputValidation = TokenExchangeApiOutputSchema.safeParse({
+    return reply.send({
       accessToken,
       student: {
         id: student.id,
@@ -68,11 +75,5 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         displayName: student.displayName,
       },
     });
-
-    if (!outputValidation.success) {
-      throw ApiError.internal("Invalid service response", outputValidation.error);
-    }
-
-    return reply.send(outputValidation.data);
   });
 }
