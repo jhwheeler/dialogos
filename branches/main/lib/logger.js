@@ -4,8 +4,8 @@ export const loggerConfig = {
             target: "pino-pretty",
             options: {
                 colorize: true,
-                translateTime: "HH:MM:ss Z"
-            }
+                translateTime: "HH:MM:ss Z",
+            },
         }
-        : undefined
+        : undefined,
 };
