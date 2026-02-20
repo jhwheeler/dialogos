@@ -1,98 +1,88 @@
 import { GetManyTopicFileApiInputSchema, GetManyTopicFileApiOutputSchema, PresignUploadTopicFileApiParamsSchema, PresignUploadTopicFileApiBodySchema, PresignUploadTopicFileApiOutputSchema, CreateOneTopicFileApiParamsSchema, CreateOneTopicFileApiBodySchema, CreateOneTopicFileApiOutputSchema, DeleteOneTopicFileApiInputSchema, DeleteOneTopicFileApiOutputSchema, } from "../../types/api/topic-file/index.js";
-import { ApiError } from "../../errors/api-error.js";
 export const topicFileRoutes = async (fastify) => {
+    const app = fastify.withTypeProvider();
     const topicFileService = fastify.container.services.topicFile;
     // GET /topics/:topicId/files — list all non-deleted files for a topic
-    fastify.get("/topics/:topicId/files", async (request, reply) => {
-        await fastify.authenticate(request, reply);
-        const inputValidation = GetManyTopicFileApiInputSchema.safeParse(request.params);
-        if (!inputValidation.success) {
-            throw ApiError.validation("Invalid topicId", inputValidation.error);
-        }
+    app.get("/topics/:topicId/files", {
+        schema: {
+            tags: ["Topic Files"],
+            security: [{ bearerAuth: [] }],
+            params: GetManyTopicFileApiInputSchema,
+            response: { 200: GetManyTopicFileApiOutputSchema },
+        },
+        onRequest: [fastify.authenticate],
+    }, async (request, reply) => {
         const serviceOutput = await topicFileService.getMany({
-            topicId: inputValidation.data.topicId,
+            topicId: request.params.topicId,
             studentId: request.studentId,
         });
-        const outputValidation = GetManyTopicFileApiOutputSchema.safeParse({
+        return reply.send({
             files: serviceOutput.map((file) => ({
                 ...file,
                 createdAt: file.createdAt.toISOString(),
             })),
         });
-        if (!outputValidation.success) {
-            throw ApiError.internal("Invalid service response", outputValidation.error);
-        }
-        return reply.send(outputValidation.data);
     });
     // POST /topics/:topicId/files/presign — get a pre-signed upload URL
-    fastify.post("/topics/:topicId/files/presign", async (request, reply) => {
-        await fastify.authenticate(request, reply);
-        const paramsValidation = PresignUploadTopicFileApiParamsSchema.safeParse(request.params);
-        if (!paramsValidation.success) {
-            throw ApiError.validation("Invalid topicId", paramsValidation.error);
-        }
-        const bodyValidation = PresignUploadTopicFileApiBodySchema.safeParse(request.body);
-        if (!bodyValidation.success) {
-            throw ApiError.validation("Invalid request body", bodyValidation.error);
-        }
+    app.post("/topics/:topicId/files/presign", {
+        schema: {
+            tags: ["Topic Files"],
+            security: [{ bearerAuth: [] }],
+            params: PresignUploadTopicFileApiParamsSchema,
+            body: PresignUploadTopicFileApiBodySchema,
+            response: { 200: PresignUploadTopicFileApiOutputSchema },
+        },
+        onRequest: [fastify.authenticate],
+    }, async (request, reply) => {
         const serviceOutput = await topicFileService.presignUpload({
-            topicId: paramsValidation.data.topicId,
+            topicId: request.params.topicId,
             studentId: request.studentId,
-            kind: bodyValidation.data.kind,
-            originalName: bodyValidation.data.originalName,
-            mimeType: bodyValidation.data.mimeType,
-            sizeBytes: bodyValidation.data.sizeBytes,
+            kind: request.body.kind,
+            originalName: request.body.originalName,
+            mimeType: request.body.mimeType,
+            sizeBytes: request.body.sizeBytes,
         });
-        const outputValidation = PresignUploadTopicFileApiOutputSchema.safeParse(serviceOutput);
-        if (!outputValidation.success) {
-            throw ApiError.internal("Invalid service response", outputValidation.error);
-        }
-        return reply.send(outputValidation.data);
+        return reply.send(serviceOutput);
     });
     // POST /topics/:topicId/files — confirm file upload (create record)
-    fastify.post("/topics/:topicId/files", async (request, reply) => {
-        await fastify.authenticate(request, reply);
-        const paramsValidation = CreateOneTopicFileApiParamsSchema.safeParse(request.params);
-        if (!paramsValidation.success) {
-            throw ApiError.validation("Invalid topicId", paramsValidation.error);
-        }
-        const bodyValidation = CreateOneTopicFileApiBodySchema.safeParse(request.body);
-        if (!bodyValidation.success) {
-            throw ApiError.validation("Invalid request body", bodyValidation.error);
-        }
+    app.post("/topics/:topicId/files", {
+        schema: {
+            tags: ["Topic Files"],
+            security: [{ bearerAuth: [] }],
+            params: CreateOneTopicFileApiParamsSchema,
+            body: CreateOneTopicFileApiBodySchema,
+            response: { 201: CreateOneTopicFileApiOutputSchema },
+        },
+        onRequest: [fastify.authenticate],
+    }, async (request, reply) => {
         const serviceOutput = await topicFileService.createOne({
-            topicId: paramsValidation.data.topicId,
+            topicId: request.params.topicId,
             studentId: request.studentId,
-            storageKey: bodyValidation.data.storageKey,
-            kind: bodyValidation.data.kind,
-            originalName: bodyValidation.data.originalName,
-            mimeType: bodyValidation.data.mimeType,
-            sizeBytes: bodyValidation.data.sizeBytes,
+            storageKey: request.body.storageKey,
+            kind: request.body.kind,
+            originalName: request.body.originalName,
+            mimeType: request.body.mimeType,
+            sizeBytes: request.body.sizeBytes,
         });
-        const outputValidation = CreateOneTopicFileApiOutputSchema.safeParse({
+        return reply.status(201).send({
             ...serviceOutput,
             createdAt: serviceOutput.createdAt.toISOString(),
         });
-        if (!outputValidation.success) {
-            throw ApiError.internal("Invalid service response", outputValidation.error);
-        }
-        return reply.status(201).send(outputValidation.data);
     });
     // DELETE /topics/:topicId/files/:fileId — soft-delete a file
-    fastify.delete("/topics/:topicId/files/:fileId", async (request, reply) => {
-        await fastify.authenticate(request, reply);
-        const inputValidation = DeleteOneTopicFileApiInputSchema.safeParse(request.params);
-        if (!inputValidation.success) {
-            throw ApiError.validation("Invalid parameters", inputValidation.error);
-        }
+    app.delete("/topics/:topicId/files/:fileId", {
+        schema: {
+            tags: ["Topic Files"],
+            security: [{ bearerAuth: [] }],
+            params: DeleteOneTopicFileApiInputSchema,
+            response: { 200: DeleteOneTopicFileApiOutputSchema },
+        },
+        onRequest: [fastify.authenticate],
+    }, async (request, reply) => {
         const serviceOutput = await topicFileService.deleteOne({
-            id: inputValidation.data.fileId,
+            id: request.params.fileId,
             studentId: request.studentId,
         });
-        const outputValidation = DeleteOneTopicFileApiOutputSchema.safeParse(serviceOutput);
-        if (!outputValidation.success) {
-            throw ApiError.internal("Invalid service response", outputValidation.error);
-        }
-        return reply.send(outputValidation.data);
+        return reply.send(serviceOutput);
     });
 };

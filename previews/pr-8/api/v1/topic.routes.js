@@ -1,108 +1,103 @@
 import { GetOneTopicApiInputSchema, GetOneTopicApiOutputSchema, GetManyTopicApiOutputSchema, CreateOneTopicApiInputSchema, CreateOneTopicApiOutputSchema, UpdateOneTopicApiParamsSchema, UpdateOneTopicApiBodySchema, UpdateOneTopicApiOutputSchema, DeleteOneTopicApiInputSchema, DeleteOneTopicApiOutputSchema, } from "../../types/api/topic/index.js";
-import { ApiError } from "../../errors/api-error.js";
 export const topicRoutes = async (fastify) => {
+    const app = fastify.withTypeProvider();
     const topicService = fastify.container.services.topic;
     // GET /topics — list all non-deleted topics for the authenticated student
-    fastify.get("/topics", async (request, reply) => {
-        await fastify.authenticate(request, reply);
+    app.get("/topics", {
+        schema: {
+            tags: ["Topics"],
+            security: [{ bearerAuth: [] }],
+            response: { 200: GetManyTopicApiOutputSchema },
+        },
+        onRequest: [fastify.authenticate],
+    }, async (request, reply) => {
         const serviceOutput = await topicService.getMany({
             studentId: request.studentId,
         });
-        const outputValidation = GetManyTopicApiOutputSchema.safeParse({
+        return reply.send({
             topics: serviceOutput.map((topic) => ({
                 ...topic,
                 createdAt: topic.createdAt.toISOString(),
                 updatedAt: topic.updatedAt.toISOString(),
             })),
         });
-        if (!outputValidation.success) {
-            throw ApiError.internal("Invalid service response", outputValidation.error);
-        }
-        return reply.send(outputValidation.data);
     });
     // POST /topics — create a new topic
-    fastify.post("/topics", async (request, reply) => {
-        await fastify.authenticate(request, reply);
-        const inputValidation = CreateOneTopicApiInputSchema.safeParse(request.body);
-        if (!inputValidation.success) {
-            throw ApiError.validation("Invalid request body", inputValidation.error);
-        }
+    app.post("/topics", {
+        schema: {
+            tags: ["Topics"],
+            security: [{ bearerAuth: [] }],
+            body: CreateOneTopicApiInputSchema,
+            response: { 201: CreateOneTopicApiOutputSchema },
+        },
+        onRequest: [fastify.authenticate],
+    }, async (request, reply) => {
         const serviceOutput = await topicService.createOne({
             studentId: request.studentId,
-            ...inputValidation.data,
+            ...request.body,
         });
-        const outputValidation = CreateOneTopicApiOutputSchema.safeParse({
+        return reply.status(201).send({
             ...serviceOutput,
             createdAt: serviceOutput.createdAt.toISOString(),
             updatedAt: serviceOutput.updatedAt.toISOString(),
         });
-        if (!outputValidation.success) {
-            throw ApiError.internal("Invalid service response", outputValidation.error);
-        }
-        return reply.status(201).send(outputValidation.data);
     });
     // GET /topics/:topicId — get one topic (ownership check in service)
-    fastify.get("/topics/:topicId", async (request, reply) => {
-        await fastify.authenticate(request, reply);
-        const inputValidation = GetOneTopicApiInputSchema.safeParse(request.params);
-        if (!inputValidation.success) {
-            throw ApiError.validation("Invalid topicId", inputValidation.error);
-        }
+    app.get("/topics/:topicId", {
+        schema: {
+            tags: ["Topics"],
+            security: [{ bearerAuth: [] }],
+            params: GetOneTopicApiInputSchema,
+            response: { 200: GetOneTopicApiOutputSchema },
+        },
+        onRequest: [fastify.authenticate],
+    }, async (request, reply) => {
         const serviceOutput = await topicService.getOne({
-            id: inputValidation.data.topicId,
+            id: request.params.topicId,
             studentId: request.studentId,
         });
-        const outputValidation = GetOneTopicApiOutputSchema.safeParse({
+        return reply.send({
             ...serviceOutput,
             createdAt: serviceOutput.createdAt.toISOString(),
             updatedAt: serviceOutput.updatedAt.toISOString(),
         });
-        if (!outputValidation.success) {
-            throw ApiError.internal("Invalid service response", outputValidation.error);
-        }
-        return reply.send(outputValidation.data);
     });
     // PATCH /topics/:topicId — update a topic (ownership check in service)
-    fastify.patch("/topics/:topicId", async (request, reply) => {
-        await fastify.authenticate(request, reply);
-        const paramsValidation = UpdateOneTopicApiParamsSchema.safeParse(request.params);
-        if (!paramsValidation.success) {
-            throw ApiError.validation("Invalid topicId", paramsValidation.error);
-        }
-        const bodyValidation = UpdateOneTopicApiBodySchema.safeParse(request.body);
-        if (!bodyValidation.success) {
-            throw ApiError.validation("Invalid request body", bodyValidation.error);
-        }
+    app.patch("/topics/:topicId", {
+        schema: {
+            tags: ["Topics"],
+            security: [{ bearerAuth: [] }],
+            params: UpdateOneTopicApiParamsSchema,
+            body: UpdateOneTopicApiBodySchema,
+            response: { 200: UpdateOneTopicApiOutputSchema },
+        },
+        onRequest: [fastify.authenticate],
+    }, async (request, reply) => {
         const serviceOutput = await topicService.updateOne({
-            id: paramsValidation.data.topicId,
+            id: request.params.topicId,
             studentId: request.studentId,
-            ...bodyValidation.data,
+            ...request.body,
         });
-        const outputValidation = UpdateOneTopicApiOutputSchema.safeParse({
+        return reply.send({
             ...serviceOutput,
             createdAt: serviceOutput.createdAt.toISOString(),
             updatedAt: serviceOutput.updatedAt.toISOString(),
         });
-        if (!outputValidation.success) {
-            throw ApiError.internal("Invalid service response", outputValidation.error);
-        }
-        return reply.send(outputValidation.data);
     });
     // DELETE /topics/:topicId — soft-delete (sets deletedAt)
-    fastify.delete("/topics/:topicId", async (request, reply) => {
-        await fastify.authenticate(request, reply);
-        const inputValidation = DeleteOneTopicApiInputSchema.safeParse(request.params);
-        if (!inputValidation.success) {
-            throw ApiError.validation("Invalid topicId", inputValidation.error);
-        }
+    app.delete("/topics/:topicId", {
+        schema: {
+            tags: ["Topics"],
+            security: [{ bearerAuth: [] }],
+            params: DeleteOneTopicApiInputSchema,
+            response: { 200: DeleteOneTopicApiOutputSchema },
+        },
+        onRequest: [fastify.authenticate],
+    }, async (request, reply) => {
         const serviceOutput = await topicService.deleteOne({
-            id: inputValidation.data.topicId,
+            id: request.params.topicId,
             studentId: request.studentId,
         });
-        const outputValidation = DeleteOneTopicApiOutputSchema.safeParse(serviceOutput);
-        if (!outputValidation.success) {
-            throw ApiError.internal("Invalid service response", outputValidation.error);
-        }
-        return reply.send(outputValidation.data);
+        return reply.send(serviceOutput);
     });
 };

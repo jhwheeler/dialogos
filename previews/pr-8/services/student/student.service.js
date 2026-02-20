@@ -25,6 +25,9 @@ export class StudentService {
         });
         return StudentMapper.createOrFind.output.fromDataSourceToService(created, true);
     }
+    async ensureExists(input) {
+        await this.studentDataSource.ensureExists(input);
+    }
     async updateOne(input) {
         await this.getOne({ id: input.id });
         const updated = await this.studentDataSource.updateOne({

@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { ApiError } from "../../errors/api-error.js";
 import { NotFoundError } from "../../errors/not-found-error.js";
 import { TopicFileMapper } from "../../mappers/topic-file.mapper.js";
 export class TopicFileService {
@@ -32,9 +33,10 @@ export class TopicFileService {
     async presignUpload(input) {
         await this.verifyTopicOwnership(input.topicId, input.studentId);
         if (!this.storage) {
-            throw new Error("Storage provider is not configured");
+            throw ApiError.internal("Storage provider is not configured");
         }
-        const storageKey = `topics/${input.topicId}/files/${crypto.randomUUID()}/${input.originalName}`;
+        const safeName = input.originalName.replace(/[/\\]/g, "_");
+        const storageKey = `topics/${input.topicId}/files/${crypto.randomUUID()}/${safeName}`;
         const uploadUrl = await this.storage.getPresignedUploadUrl(storageKey, input.mimeType);
         return { uploadUrl, storageKey };
     }

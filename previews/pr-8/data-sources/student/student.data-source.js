@@ -35,6 +35,13 @@ export class StudentDataSource {
             },
         });
     }
+    async ensureExists(input) {
+        await this.prisma.student.upsert({
+            where: { id: input.id },
+            update: {},
+            create: { id: input.id, email: input.email, displayName: input.displayName },
+        });
+    }
     async deleteOne(input) {
         return this.prisma.student.update({
             where: { id: input.id },
