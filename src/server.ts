@@ -7,7 +7,7 @@ async function main() {
 
   await app.listen({
     host: env.HOST,
-    port: env.PORT
+    port: env.PORT,
   });
 }
 
