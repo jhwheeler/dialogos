@@ -9,6 +9,7 @@ import type {
   DeleteOneTopicFileServiceInput,
   DeleteOneTopicFileServiceOutput,
 } from "../../types/service/topic-file/index.js";
+import { ApiError } from "../../errors/api-error.js";
 import { NotFoundError } from "../../errors/not-found-error.js";
 import { TopicFileDataSource } from "../../data-sources/topic-file/topic-file.data-source.js";
 import { TopicDataSource } from "../../data-sources/topic/topic.data-source.js";
@@ -56,10 +57,11 @@ export class TopicFileService {
     await this.verifyTopicOwnership(input.topicId, input.studentId);
 
     if (!this.storage) {
-      throw new Error("Storage provider is not configured");
+      throw ApiError.internal("Storage provider is not configured");
     }
 
-    const storageKey = `topics/${input.topicId}/files/${crypto.randomUUID()}/${input.originalName}`;
+    const safeName = input.originalName.replace(/[/\\]/g, "_");
+    const storageKey = `topics/${input.topicId}/files/${crypto.randomUUID()}/${safeName}`;
 
     const uploadUrl = await this.storage.getPresignedUploadUrl(storageKey, input.mimeType);
 

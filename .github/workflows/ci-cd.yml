@@ -30,7 +30,7 @@ jobs:
           --health-retries=5
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dialogos_test
-      JWT_SECRET: ci-test-secret-key-must-be-at-least-32-characters
+      SUPABASE_JWT_SECRET: ci-test-secret-key-must-be-at-least-32-characters
       NODE_ENV: test
     steps:
       - name: Checkout
