@@ -19,93 +19,109 @@ export const topicFileRoutes: FastifyPluginAsync = async (fastify) => {
   const topicFileService = fastify.container.services.topicFile as TopicFileService;
 
   // GET /topics/:topicId/files — list all non-deleted files for a topic
-  app.get("/topics/:topicId/files", {
-    schema: {
-      tags: ["Topic Files"],
-      security: [{ bearerAuth: [] }],
-      params: GetManyTopicFileApiInputSchema,
-      response: { 200: GetManyTopicFileApiOutputSchema },
+  app.get(
+    "/topics/:topicId/files",
+    {
+      schema: {
+        tags: ["Topic Files"],
+        security: [{ bearerAuth: [] }],
+        params: GetManyTopicFileApiInputSchema,
+        response: { 200: GetManyTopicFileApiOutputSchema },
+      },
+      onRequest: [fastify.authenticate],
     },
-    onRequest: [fastify.authenticate],
-  }, async (request, reply) => {
-    const serviceOutput = await topicFileService.getMany({
-      topicId: request.params.topicId,
-      studentId: request.studentId,
-    });
+    async (request, reply) => {
+      const serviceOutput = await topicFileService.getMany({
+        topicId: request.params.topicId,
+        studentId: request.studentId,
+      });
 
-    return reply.send({
-      files: serviceOutput.map((file) => ({
-        ...file,
-        createdAt: file.createdAt.toISOString(),
-      })),
-    });
-  });
+      return reply.send({
+        files: serviceOutput.map((file) => ({
+          ...file,
+          createdAt: file.createdAt.toISOString(),
+        })),
+      });
+    },
+  );
 
   // POST /topics/:topicId/files/presign — get a pre-signed upload URL
-  app.post("/topics/:topicId/files/presign", {
-    schema: {
-      tags: ["Topic Files"],
-      security: [{ bearerAuth: [] }],
-      params: PresignUploadTopicFileApiParamsSchema,
-      body: PresignUploadTopicFileApiBodySchema,
-      response: { 200: PresignUploadTopicFileApiOutputSchema },
+  app.post(
+    "/topics/:topicId/files/presign",
+    {
+      schema: {
+        tags: ["Topic Files"],
+        security: [{ bearerAuth: [] }],
+        params: PresignUploadTopicFileApiParamsSchema,
+        body: PresignUploadTopicFileApiBodySchema,
+        response: { 200: PresignUploadTopicFileApiOutputSchema },
+      },
+      onRequest: [fastify.authenticate],
     },
-    onRequest: [fastify.authenticate],
-  }, async (request, reply) => {
-    const serviceOutput = await topicFileService.presignUpload({
-      topicId: request.params.topicId,
-      studentId: request.studentId,
-      kind: request.body.kind,
-      originalName: request.body.originalName,
-      mimeType: request.body.mimeType,
-      sizeBytes: request.body.sizeBytes,
-    });
+    async (request, reply) => {
+      const serviceOutput = await topicFileService.presignUpload({
+        topicId: request.params.topicId,
+        studentId: request.studentId,
+        kind: request.body.kind,
+        originalName: request.body.originalName,
+        mimeType: request.body.mimeType,
+        sizeBytes: request.body.sizeBytes,
+      });
 
-    return reply.send(serviceOutput);
-  });
+      return reply.send(serviceOutput);
+    },
+  );
 
   // POST /topics/:topicId/files — confirm file upload (create record)
-  app.post("/topics/:topicId/files", {
-    schema: {
-      tags: ["Topic Files"],
-      security: [{ bearerAuth: [] }],
-      params: CreateOneTopicFileApiParamsSchema,
-      body: CreateOneTopicFileApiBodySchema,
-      response: { 201: CreateOneTopicFileApiOutputSchema },
+  app.post(
+    "/topics/:topicId/files",
+    {
+      schema: {
+        tags: ["Topic Files"],
+        security: [{ bearerAuth: [] }],
+        params: CreateOneTopicFileApiParamsSchema,
+        body: CreateOneTopicFileApiBodySchema,
+        response: { 201: CreateOneTopicFileApiOutputSchema },
+      },
+      onRequest: [fastify.authenticate],
     },
-    onRequest: [fastify.authenticate],
-  }, async (request, reply) => {
-    const serviceOutput = await topicFileService.createOne({
-      topicId: request.params.topicId,
-      studentId: request.studentId,
-      storageKey: request.body.storageKey,
-      kind: request.body.kind,
-      originalName: request.body.originalName,
-      mimeType: request.body.mimeType,
-      sizeBytes: request.body.sizeBytes,
-    });
+    async (request, reply) => {
+      const serviceOutput = await topicFileService.createOne({
+        topicId: request.params.topicId,
+        studentId: request.studentId,
+        storageKey: request.body.storageKey,
+        kind: request.body.kind,
+        originalName: request.body.originalName,
+        mimeType: request.body.mimeType,
+        sizeBytes: request.body.sizeBytes,
+      });
 
-    return reply.status(201).send({
-      ...serviceOutput,
-      createdAt: serviceOutput.createdAt.toISOString(),
-    });
-  });
+      return reply.status(201).send({
+        ...serviceOutput,
+        createdAt: serviceOutput.createdAt.toISOString(),
+      });
+    },
+  );
 
   // DELETE /topics/:topicId/files/:fileId — soft-delete a file
-  app.delete("/topics/:topicId/files/:fileId", {
-    schema: {
-      tags: ["Topic Files"],
-      security: [{ bearerAuth: [] }],
-      params: DeleteOneTopicFileApiInputSchema,
-      response: { 200: DeleteOneTopicFileApiOutputSchema },
+  app.delete(
+    "/topics/:topicId/files/:fileId",
+    {
+      schema: {
+        tags: ["Topic Files"],
+        security: [{ bearerAuth: [] }],
+        params: DeleteOneTopicFileApiInputSchema,
+        response: { 200: DeleteOneTopicFileApiOutputSchema },
+      },
+      onRequest: [fastify.authenticate],
     },
-    onRequest: [fastify.authenticate],
-  }, async (request, reply) => {
-    const serviceOutput = await topicFileService.deleteOne({
-      id: request.params.fileId,
-      studentId: request.studentId,
-    });
+    async (request, reply) => {
+      const serviceOutput = await topicFileService.deleteOne({
+        id: request.params.fileId,
+        studentId: request.studentId,
+      });
 
-    return reply.send(serviceOutput);
-  });
+      return reply.send(serviceOutput);
+    },
+  );
 };
