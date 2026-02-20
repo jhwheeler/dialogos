@@ -16,11 +16,14 @@
 - Triggers:
   - Every push to any branch (`push`)
   - Pull request updates (`pull_request` opened/synchronize/reopened)
-- Build steps:
-  1. `npm ci`
-  2. `npm run prisma:generate`
-  3. `npm run build`
+- CI jobs (run in parallel):
+  - `Lint`: `npm run lint`
+  - `Format check`: `npm run format:check`
+  - `Typecheck`: `npm run typecheck`
+  - `Test`: `npm run test` (with Postgres service + migrations)
+  - `Build`: `npm run build` + uploads `dist/` artifact
 - Deployment strategy:
+  - Deploy job waits for all CI jobs.
   - Built files from `dist/` are published to a dedicated `deployments` branch.
   - Push builds are published at `branches/<branch-name>`.
   - PR builds are published at `previews/pr-<number>`.
