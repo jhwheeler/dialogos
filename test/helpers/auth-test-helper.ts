@@ -1,4 +1,4 @@
-import { signToken } from "../../src/lib/jwt.js";
+import { SignJWT } from "jose";
 
 const TEST_JWT_SECRET = "test-secret-key-must-be-at-least-32-characters";
 
@@ -7,7 +7,11 @@ export function getTestJwtSecret(): string {
 }
 
 export async function createTestToken(studentId: string): Promise<string> {
-  return signToken({ studentId }, TEST_JWT_SECRET);
+  const secret = new TextEncoder().encode(TEST_JWT_SECRET);
+  return new SignJWT({ sub: studentId, email: "test@example.com" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("1h")
+    .sign(secret);
 }
 
 export function authHeader(token: string): { authorization: string } {

@@ -10,7 +10,6 @@ import {
 } from "fastify-type-provider-zod";
 
 import { healthRoutes } from "./api/v1/health.routes.js";
-import { authRoutes } from "./api/v1/auth.routes.js";
 import { topicRoutes } from "./api/v1/topic.routes.js";
 import { topicFileRoutes } from "./api/v1/topic-file.routes.js";
 import authPlugin from "./api/auth.plugin.js";
@@ -58,11 +57,10 @@ export function buildApp() {
   app.register(swaggerUi, { routePrefix: "/docs" });
 
   app.register(containerPlugin, { container });
-  app.register(authPlugin, { jwtSecret: env.JWT_SECRET });
+  app.register(authPlugin, { supabaseJwtSecret: env.SUPABASE_JWT_SECRET });
 
   app.register(async (v1) => {
     await v1.register(healthRoutes, { prefix: "/v1" });
-    await v1.register(authRoutes, { prefix: "/v1" });
     await v1.register(topicRoutes, { prefix: "/v1" });
     await v1.register(topicFileRoutes, { prefix: "/v1" });
   });

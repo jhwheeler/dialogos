@@ -44,6 +44,14 @@ export class StudentService {
     return StudentMapper.createOrFind.output.fromDataSourceToService(created, true);
   }
 
+  public async ensureExists(input: {
+    id: string;
+    email: string;
+    displayName: string;
+  }): Promise<void> {
+    await this.studentDataSource.ensureExists(input);
+  }
+
   public async updateOne(
     input: UpdateOneStudentServiceInput,
   ): Promise<UpdateOneStudentServiceOutput> {
