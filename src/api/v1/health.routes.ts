@@ -7,12 +7,16 @@ const HealthOutputSchema = z.object({ status: z.literal("ok") });
 export async function healthRoutes(fastify: FastifyInstance): Promise<void> {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
-  app.get("/health", {
-    schema: {
-      tags: ["Health"],
-      response: { 200: HealthOutputSchema },
+  app.get(
+    "/health",
+    {
+      schema: {
+        tags: ["Health"],
+        response: { 200: HealthOutputSchema },
+      },
     },
-  }, async () => {
-    return { status: "ok" as const };
-  });
+    async () => {
+      return { status: "ok" as const };
+    },
+  );
 }
