@@ -768,7 +768,7 @@ Acceptance checks:
 
 #### Phase 1 PR split (backend-focused)
 
-1. **PR-1 — Session lifecycle (next now)**
+1. **PR-1 — Session lifecycle (start now)**
    - Session CRUD-lite for draft/start/end/list with transition enforcement.
 2. **PR-2 — Turn intake + audio presign**
    - Add turn type/data-source/service/route contracts.
