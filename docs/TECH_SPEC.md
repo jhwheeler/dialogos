@@ -737,10 +737,52 @@ Pick one and stay consistent:
 
 ### Phase 1: session loop
 
-- Session start/end
-- Turn creation + audio upload
-- STT job + prompt generation job
-- Basic UI session screen
+Phase 0 is complete (foundations are in place). Phase 1 should now be split into small backend-first PRs, each shipping one vertical slice.
+
+#### Phase 1 immediate next step (PR-1)
+
+**Implement session lifecycle API (draft → active → ended) with strict backend layering.**
+
+Scope:
+
+- Add `Session` types in all three layers (`src/types/api/session`, `src/types/service/session`, `src/types/data-source/session`) using per-operation kebab-case files and namespace barrels.
+- Add `SessionDataSource` (Prisma-only methods, `input` parameter naming, no business logic).
+- Add `SessionService` methods for:
+  - create draft session
+  - start session (enforce valid transition `DRAFT -> ACTIVE`)
+  - end session (enforce valid transition `ACTIVE -> ENDED`)
+  - list sessions for topic (non-deleted only)
+- Add `/v1` routes for:
+  - `GET /v1/topics/:topicId/sessions`
+  - `POST /v1/topics/:topicId/sessions`
+  - `POST /v1/sessions/:sessionId/start`
+  - `POST /v1/sessions/:sessionId/end`
+- Use API schemas from type layer and validate both request and response with `safeParse` in route handlers.
+- Keep authorization behavior consistent with topic routes (student can only access their own topic/session records).
+
+Acceptance checks:
+
+- Unit tests for service state transitions and invalid transitions.
+- Route tests for auth boundaries, 404 ownership behavior, and happy-path transitions.
+- No queue/STT/model calls yet in PR-1 (defer to PR-3/PR-4 below).
+
+#### Phase 1 PR split (backend-focused)
+
+1. **PR-1 — Session lifecycle (next now)**
+   - Session CRUD-lite for draft/start/end/list with transition enforcement.
+2. **PR-2 — Turn intake + audio presign**
+   - Add turn type/data-source/service/route contracts.
+   - Implement `POST /v1/sessions/:sessionId/turns/presign-audio` and `POST /v1/sessions/:sessionId/turns`.
+   - Persist turn rows with pending assistant fields; keep ownership checks strict.
+3. **PR-3 — Async pipeline skeleton**
+   - Add queue abstraction and job contracts (`TRANSCRIBE_TURN`, `GENERATE_PROMPT`) with no-op/mock handlers wired through service orchestration.
+   - Add turn status read endpoint (`GET /v1/sessions/:sessionId/turns/:turnId`) for polling.
+4. **PR-4 — Prompt generation enforcement loop**
+   - Implement strict structured output validation pipeline from Section 4.3 (schema, word cap, banned phrases, one-sentence check, bounded retries).
+   - Persist `assistantText`, `assistantPromptType`, `assistantDetectedIssue`, `latencyMs`.
+5. **PR-5 — Basic mobile session screen integration (client)**
+   - Wire session start/record/upload/poll/end to backend endpoints with minimal UI controls.
+   - Keep UI scope limited to proving the loop works end-to-end.
 
 ### Phase 2: artifacts + review
 
