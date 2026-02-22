@@ -54,9 +54,7 @@ export class TurnService {
     const { status } = await this.verifySessionOwnership(input.sessionId, input.studentId);
 
     if (status !== "active") {
-      throw new ConflictError(
-        `Cannot presign audio: session status is '${status}', expected 'active'`,
-      );
+      throw new ConflictError("Cannot presign audio: invalid session status");
     }
 
     if (!this.storage) {
@@ -66,11 +64,18 @@ export class TurnService {
     const safeName = input.originalName
       .replace(/\.\./g, "_")
       .replace(/[/\\]/g, "_")
-      .replace(/[\x00-\x1f]/g, "")
-      .replace(/[^a-zA-Z0-9._-]/g, "_");
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\x00-\x1f\x7f]/g, "")
+      .replace(/[^a-zA-Z0-9._-]/g, "_")
+      .slice(0, 255);
     const storageKey = `turns/${input.sessionId}/audio/${crypto.randomUUID()}/${safeName}`;
 
-    const uploadUrl = await this.storage.getPresignedUploadUrl(storageKey, input.mimeType);
+    const uploadUrl = await this.storage.getPresignedUploadUrl(
+      storageKey,
+      input.mimeType,
+      undefined,
+      input.sizeBytes,
+    );
 
     return { uploadUrl, storageKey };
   }
@@ -79,9 +84,7 @@ export class TurnService {
     const { status } = await this.verifySessionOwnership(input.sessionId, input.studentId);
 
     if (status !== "active") {
-      throw new ConflictError(
-        `Cannot create turn: session status is '${status}', expected 'active'`,
-      );
+      throw new ConflictError("Cannot create turn: invalid session status");
     }
 
     for (let attempt = 0; attempt < MAX_INDEX_RETRIES; attempt++) {

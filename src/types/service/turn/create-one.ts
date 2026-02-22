@@ -3,7 +3,7 @@ import { z } from "zod";
 export const CreateOneTurnServiceInputSchema = z.object({
   sessionId: z.string().uuid(),
   studentId: z.string().uuid(),
-  studentAudioKey: z.string(),
+  studentAudioKey: z.string().min(1).max(1000),
 });
 
 export type CreateOneTurnServiceInput = z.infer<typeof CreateOneTurnServiceInputSchema>;

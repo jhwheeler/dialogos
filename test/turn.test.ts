@@ -9,6 +9,11 @@ import {
   disconnectTestPrisma,
 } from "./helpers/prisma-test-client.js";
 
+/** Build a valid audio storage key matching the turns presign format. */
+function audioKey(filename: string): string {
+  return `turns/00000000-0000-0000-0000-000000000000/audio/00000000-0000-0000-0000-000000000001/${filename}`;
+}
+
 describe("Turn intake + audio presign routes", () => {
   let app: Awaited<ReturnType<typeof buildTestApp>>;
   let prisma: PrismaClient;
@@ -86,7 +91,7 @@ describe("Turn intake + audio presign routes", () => {
         method: "POST",
         url: `/v1/sessions/${activeSessionId}/turns`,
         headers: authHeader(tokenA),
-        payload: { studentAudioKey: "turns/audio/test.webm" },
+        payload: { studentAudioKey: audioKey("test.webm") },
       });
 
       expect(response.statusCode).toBe(201);
@@ -94,7 +99,7 @@ describe("Turn intake + audio presign routes", () => {
       expect(body.id).toEqual(expect.any(String));
       expect(body.sessionId).toBe(activeSessionId);
       expect(body.index).toBe(0);
-      expect(body.studentAudioKey).toBe("turns/audio/test.webm");
+      expect(body.studentAudioKey).toBe(audioKey("test.webm"));
       expect(body.studentText).toBeNull();
       expect(body.assistantText).toBeNull();
       expect(body.assistantPromptType).toBeNull();
@@ -108,7 +113,7 @@ describe("Turn intake + audio presign routes", () => {
         method: "POST",
         url: `/v1/sessions/${activeSessionId}/turns`,
         headers: authHeader(tokenA),
-        payload: { studentAudioKey: "turns/audio/turn0.webm" },
+        payload: { studentAudioKey: audioKey("turn0.webm") },
       });
       expect(res0.json().index).toBe(0);
 
@@ -116,7 +121,7 @@ describe("Turn intake + audio presign routes", () => {
         method: "POST",
         url: `/v1/sessions/${activeSessionId}/turns`,
         headers: authHeader(tokenA),
-        payload: { studentAudioKey: "turns/audio/turn1.webm" },
+        payload: { studentAudioKey: audioKey("turn1.webm") },
       });
       expect(res1.json().index).toBe(1);
 
@@ -124,7 +129,7 @@ describe("Turn intake + audio presign routes", () => {
         method: "POST",
         url: `/v1/sessions/${activeSessionId}/turns`,
         headers: authHeader(tokenA),
-        payload: { studentAudioKey: "turns/audio/turn2.webm" },
+        payload: { studentAudioKey: audioKey("turn2.webm") },
       });
       expect(res2.json().index).toBe(2);
     });
@@ -143,7 +148,7 @@ describe("Turn intake + audio presign routes", () => {
         method: "POST",
         url: `/v1/sessions/${draftSession.id}/turns`,
         headers: authHeader(tokenA),
-        payload: { studentAudioKey: "turns/audio/test.webm" },
+        payload: { studentAudioKey: audioKey("test.webm") },
       });
 
       expect(response.statusCode).toBe(409);
@@ -165,7 +170,7 @@ describe("Turn intake + audio presign routes", () => {
         method: "POST",
         url: `/v1/sessions/${endedSession.id}/turns`,
         headers: authHeader(tokenA),
-        payload: { studentAudioKey: "turns/audio/test.webm" },
+        payload: { studentAudioKey: audioKey("test.webm") },
       });
 
       expect(response.statusCode).toBe(409);
@@ -187,7 +192,7 @@ describe("Turn intake + audio presign routes", () => {
         method: "POST",
         url: `/v1/sessions/${abortedSession.id}/turns`,
         headers: authHeader(tokenA),
-        payload: { studentAudioKey: "turns/audio/test.webm" },
+        payload: { studentAudioKey: audioKey("test.webm") },
       });
 
       expect(response.statusCode).toBe(409);
@@ -199,7 +204,7 @@ describe("Turn intake + audio presign routes", () => {
         method: "POST",
         url: `/v1/sessions/${fakeId}/turns`,
         headers: authHeader(tokenA),
-        payload: { studentAudioKey: "turns/audio/test.webm" },
+        payload: { studentAudioKey: audioKey("test.webm") },
       });
 
       expect(response.statusCode).toBe(404);
@@ -220,7 +225,7 @@ describe("Turn intake + audio presign routes", () => {
         method: "POST",
         url: `/v1/sessions/${sessionB.id}/turns`,
         headers: authHeader(tokenA),
-        payload: { studentAudioKey: "turns/audio/test.webm" },
+        payload: { studentAudioKey: audioKey("test.webm") },
       });
 
       expect(response.statusCode).toBe(404);
@@ -246,7 +251,7 @@ describe("Turn intake + audio presign routes", () => {
         method: "POST",
         url: `/v1/sessions/${activeSessionId}/turns`,
         headers: authHeader(tokenA),
-        payload: { studentAudioKey: "turns/audio/test.webm" },
+        payload: { studentAudioKey: audioKey("test.webm") },
       });
       const created = createResponse.json();
 
@@ -261,7 +266,7 @@ describe("Turn intake + audio presign routes", () => {
       expect(body.id).toBe(created.id);
       expect(body.sessionId).toBe(activeSessionId);
       expect(body.index).toBe(0);
-      expect(body.studentAudioKey).toBe("turns/audio/test.webm");
+      expect(body.studentAudioKey).toBe(audioKey("test.webm"));
     });
 
     it("returns 404 for a non-existent turn", async () => {
@@ -290,7 +295,7 @@ describe("Turn intake + audio presign routes", () => {
         data: {
           sessionId: sessionB.id,
           index: 0,
-          studentAudioKey: "turns/audio/b.webm",
+          studentAudioKey: audioKey("b.webm"),
         },
       });
 
@@ -324,19 +329,19 @@ describe("Turn intake + audio presign routes", () => {
         method: "POST",
         url: `/v1/sessions/${activeSessionId}/turns`,
         headers: authHeader(tokenA),
-        payload: { studentAudioKey: "turns/audio/turn0.webm" },
+        payload: { studentAudioKey: audioKey("turn0.webm") },
       });
       await app.inject({
         method: "POST",
         url: `/v1/sessions/${activeSessionId}/turns`,
         headers: authHeader(tokenA),
-        payload: { studentAudioKey: "turns/audio/turn1.webm" },
+        payload: { studentAudioKey: audioKey("turn1.webm") },
       });
       await app.inject({
         method: "POST",
         url: `/v1/sessions/${activeSessionId}/turns`,
         headers: authHeader(tokenA),
-        payload: { studentAudioKey: "turns/audio/turn2.webm" },
+        payload: { studentAudioKey: audioKey("turn2.webm") },
       });
 
       const response = await app.inject({
@@ -351,9 +356,9 @@ describe("Turn intake + audio presign routes", () => {
       expect(body.turns[0].index).toBe(0);
       expect(body.turns[1].index).toBe(1);
       expect(body.turns[2].index).toBe(2);
-      expect(body.turns[0].studentAudioKey).toBe("turns/audio/turn0.webm");
-      expect(body.turns[1].studentAudioKey).toBe("turns/audio/turn1.webm");
-      expect(body.turns[2].studentAudioKey).toBe("turns/audio/turn2.webm");
+      expect(body.turns[0].studentAudioKey).toBe(audioKey("turn0.webm"));
+      expect(body.turns[1].studentAudioKey).toBe(audioKey("turn1.webm"));
+      expect(body.turns[2].studentAudioKey).toBe(audioKey("turn2.webm"));
     });
 
     it("returns 404 when accessing another student's session turns", async () => {
@@ -499,6 +504,66 @@ describe("Turn intake + audio presign routes", () => {
     });
   });
 
+  // ─── Input validation tests ──────────────────────────────────
+
+  describe("Input validation", () => {
+    it("rejects audio presign with unsupported MIME type", async () => {
+      const response = await app.inject({
+        method: "POST",
+        url: `/v1/sessions/${activeSessionId}/turns/presign-audio`,
+        headers: authHeader(tokenA),
+        payload: {
+          originalName: "recording.exe",
+          mimeType: "audio/x-custom",
+          sizeBytes: 12345,
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it("rejects audio presign with non-audio MIME type", async () => {
+      const response = await app.inject({
+        method: "POST",
+        url: `/v1/sessions/${activeSessionId}/turns/presign-audio`,
+        headers: authHeader(tokenA),
+        payload: {
+          originalName: "document.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 12345,
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it("rejects audio presign when sizeBytes exceeds 10 MB", async () => {
+      const response = await app.inject({
+        method: "POST",
+        url: `/v1/sessions/${activeSessionId}/turns/presign-audio`,
+        headers: authHeader(tokenA),
+        payload: {
+          originalName: "recording.webm",
+          mimeType: "audio/webm",
+          sizeBytes: 10_485_761,
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it("rejects turn creation with invalid studentAudioKey format", async () => {
+      const response = await app.inject({
+        method: "POST",
+        url: `/v1/sessions/${activeSessionId}/turns`,
+        headers: authHeader(tokenA),
+        payload: { studentAudioKey: "invalid/path/audio.webm" },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
   // ─── Auth boundary tests ───────────────────────────────────
 
   describe("Auth boundaries", () => {
@@ -506,7 +571,7 @@ describe("Turn intake + audio presign routes", () => {
       const response = await app.inject({
         method: "POST",
         url: `/v1/sessions/${activeSessionId}/turns`,
-        payload: { studentAudioKey: "turns/audio/test.webm" },
+        payload: { studentAudioKey: audioKey("test.webm") },
       });
 
       expect(response.statusCode).toBe(401);

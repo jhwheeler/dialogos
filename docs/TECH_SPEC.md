@@ -543,7 +543,7 @@ Billing-sensitive fields (`plan`, `trialRemainingSeconds`) must never be accepte
 
 #### 6.4.3 Authentication hardening
 
-- JWT verification with explicit algorithm restriction (`HS256`).
+- JWT verification with explicit algorithm restriction (`HS256`), audience claim (`"authenticated"`), and optional issuer claim validation via `SUPABASE_JWT_ISSUER`.
 - In-memory known-student cache bounded to 10,000 entries (evicts oldest on overflow).
 - Filename sanitization: strip `..`, `/`, `\`, null bytes, control characters, and limit to 255 chars.
 - Presigned upload URLs include `ContentLength` condition to prevent oversized uploads.
@@ -563,9 +563,11 @@ Student speech enters the model context via STT transcription. To mitigate promp
 
 #### 6.4.5 Audio upload validation (Phase 1 turn pipeline)
 
-- Validate MIME type on presigned audio URLs (`audio/webm`, `audio/wav`, etc.).
+- Validate MIME type via strict enum: `audio/webm`, `audio/mp4`, `audio/mpeg`, `audio/ogg`, `audio/wav`, `audio/aac`, `audio/flac`.
 - After upload, verify the file is actually audio before processing (lightweight probe).
-- Maximum audio file size: 10 MB per turn.
+- Maximum audio file size: 10 MB per turn (enforced via Zod `.max(10_485_760)` and `ContentLength` condition on presigned URL).
+- `studentAudioKey` validated with regex `^turns\/[uuid]\/audio\/[uuid]\/.+$` to prevent path traversal.
+- Turn error messages must not leak session status values (use generic "invalid session status").
 
 #### 6.4.6 Turn index concurrency (Phase 1 PR-2)
 

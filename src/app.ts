@@ -87,7 +87,10 @@ export function buildApp() {
   }
 
   app.register(containerPlugin, { container });
-  app.register(authPlugin, { supabaseJwtSecret: env.SUPABASE_JWT_SECRET });
+  app.register(authPlugin, {
+    supabaseJwtSecret: env.SUPABASE_JWT_SECRET,
+    supabaseJwtIssuer: env.SUPABASE_JWT_ISSUER,
+  });
 
   app.register(async (v1) => {
     await v1.register(healthRoutes, { prefix: "/v1" });

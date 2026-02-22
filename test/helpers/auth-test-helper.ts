@@ -10,6 +10,7 @@ export async function createTestToken(studentId: string): Promise<string> {
   const secret = new TextEncoder().encode(TEST_JWT_SECRET);
   return new SignJWT({ sub: studentId, email: "test@example.com" })
     .setProtectedHeader({ alg: "HS256" })
+    .setAudience("authenticated")
     .setExpirationTime("1h")
     .sign(secret);
 }
