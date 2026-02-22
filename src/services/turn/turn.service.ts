@@ -16,6 +16,8 @@ import { ApiError } from "../../errors/api-error.js";
 import { TurnDataSource } from "../../data-sources/turn/turn.data-source.js";
 import { SessionDataSource } from "../../data-sources/session/session.data-source.js";
 import type { StorageProvider } from "../../lib/storage/storage.js";
+import type { JobQueue } from "../../lib/queue/job-queue.js";
+import { JobType } from "../../lib/queue/types.js";
 import { TurnMapper } from "../../mappers/turn.mapper.js";
 
 const MAX_INDEX_RETRIES = 3;
@@ -25,6 +27,7 @@ export class TurnService {
     private readonly turnDataSource: TurnDataSource,
     private readonly sessionDataSource: SessionDataSource,
     private readonly storage: StorageProvider | null,
+    private readonly jobQueue: JobQueue,
   ) {}
 
   private async verifySessionOwnership(
@@ -98,6 +101,16 @@ export class TurnService {
           index,
           studentAudioKey: input.studentAudioKey,
         });
+
+        // Best-effort: enqueue async transcription pipeline
+        try {
+          await this.jobQueue.enqueue({
+            jobType: JobType.TRANSCRIBE_TURN,
+            turnId: turn.id,
+          });
+        } catch (enqueueError) {
+          console.error("Failed to enqueue TRANSCRIBE_TURN job for turn %s:", turn.id, enqueueError);
+        }
 
         return TurnMapper.createOne.output.fromDataSourceToService(turn);
       } catch (error) {
