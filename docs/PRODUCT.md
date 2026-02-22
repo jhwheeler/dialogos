@@ -405,6 +405,17 @@ Sources are stored in a per-topic library. A student can reuse a source across m
 - auto-fill trivium slots
 - praise the user just to be pleasant
 
+### When the student asks about the material
+
+If a student explicitly asks "What does the author mean?" or "Can you summarize this?", the AI does not flatly refuse or silently comply. It follows a redirect-then-scaffold approach:
+
+1. **Redirect first:** Socratic turn-back. "What do *you* think the author means? Paraphrase it."
+2. **Scaffold second:** If the student is genuinely stuck (asks again, says "I don't know"), offer a partial scaffold — a quoted passage, a narrowing question, a structural clue — never the full answer.
+
+The AI gives the student something to push against, not something to copy. This matches how effective human tutors actually work: a real Socrates offered content, but always through questions.
+
+See TECH_SPEC.md Section 4.5 for implementation details and future evolution toward tiered escalation with metrics tracking.
+
 This distinction is central to the product identity.
 
 ---

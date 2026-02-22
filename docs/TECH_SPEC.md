@@ -266,8 +266,8 @@ All model outputs used for prompting MUST validate against this JSON schema:
 ```json
 {
   "next_prompt": "string (<= 12 words default)",
-  "prompt_type": "define | distinguish | premise | inference | objection | compress | clarify | example | scope | contradiction | locate_passage | reconcile",
-  "detected_issue": "vague_term | missing_premise | equivocation | drift | contradiction | unclear_referent | unsupported_claim | unsupported_by_source | contradicts_source | misattribution | none",
+  "prompt_type": "define | distinguish | premise | inference | objection | compress | clarify | example | scope | contradiction | locate_passage | reconcile | redirect_to_student | scaffold",
+  "detected_issue": "vague_term | missing_premise | equivocation | drift | contradiction | unclear_referent | unsupported_claim | unsupported_by_source | contradicts_source | misattribution | content_request | none",
   "stop_reason": "needs_definition | needs_example | needs_premise | needs_scope | needs_source_evidence | ok_continue"
 }
 ```
@@ -276,7 +276,11 @@ Only `next_prompt` is spoken to the student. All other fields are stored for ins
 
 New prompt types for source-anchoring: `locate_passage` (demand textual evidence), `reconcile` (flag contradiction with source).
 
+New prompt types for content question handling: `redirect_to_student` (Socratic turn-back when student asks for content), `scaffold` (partial scaffold when student is stuck — quote a passage, narrow the question, highlight a structural clue).
+
 New detected issues for source-anchoring: `unsupported_by_source`, `contradicts_source`, `misattribution`.
+
+New detected issue for content question handling: `content_request` (student asked for summary, explanation, or meaning of source material).
 
 ### 4.2 Style constraints
 
@@ -323,7 +327,29 @@ When the session's Source has extracted text (Tier 1) or is a known canonical wo
 | **Tier 2** | Known/canonical text, no upload | Draws on training knowledge. Can demand evidence, flag likely misreadings. |
 | **Tier 3** | Obscure or no source text | Form-only coaching. Cannot verify content claims. |
 
-### 4.5 Enforcement loop
+### 4.5 Content question handling (redirect → scaffold)
+
+When a student asks a direct question about the source material ("What does the author mean by X?" or "Can you summarize this passage?"), the AI does not simply refuse or comply. It follows a two-tier redirect-then-scaffold protocol.
+
+**Phase 1 behavior (current):**
+
+| Tier | Trigger | AI response |
+|---|---|---|
+| **Redirect** (first ask) | Student asks for summary, explanation, or meaning of source content | Socratic redirect. "What do *you* think the author means? Paraphrase it." / "State it in your own words first." |
+| **Scaffold** (repeated ask or "I don't know") | Student asks again, or explicitly says they're stuck | Partial scaffold — never the answer. Narrow the question, quote a relevant passage, or highlight a structural clue. E.g., "The author uses 'justice' three times in this paragraph. What do you notice about how the usage shifts?" |
+
+The AI never provides the full answer at either tier. The scaffold gives the student something to push against, not something to copy.
+
+**Design rationale:** A real Socrates offered content — but always through questions. Rigidly refusing a stuck student is paternalistic; immediately answering undermines the product. The redirect-then-scaffold pattern matches how effective human tutors actually behave.
+
+**Future evolution (Phase 2+):** Add a third tier — if the student explicitly asks a third time, comply but quarantine. The AI provides a reading of the passage, then immediately demands the student's own articulation ("Here's one reading. Now — do you agree? State your own position."). Any AI-provided content is:
+- Flagged in the session transcript as `ai_provided_content`
+- Excluded from Concept Ledger candidate extraction
+- Tracked in session metrics (`content_requests_count` vs `student_generated_count`)
+
+This preserves the anti-offloading principle while respecting student autonomy and providing an honest record of what happened.
+
+### 4.6 Enforcement loop
 
 Every model response goes through a validation pipeline before reaching the student:
 
@@ -335,7 +361,7 @@ Every model response goes through a validation pipeline before reaching the stud
 
 This pipeline is the difference between "we asked the model to behave" and "the system guarantees it." A general chat UI cannot enforce this; the enforcement layer is a core product requirement.
 
-### 4.6 Prompting strategy
+### 4.7 Prompting strategy
 
 - Run model in **structured output mode**.
 - Keep conversation context minimal:
@@ -757,7 +783,8 @@ All endpoints under `/v1`.
   - call model for strict JSON prompt
   - apply deterministic Socratic rules (Section 4.3)
   - apply source-anchoring rules if applicable (Section 4.4)
-  - validate via enforcement loop (Section 4.5); regenerate if invalid
+  - apply content question handling rules if applicable (Section 4.5)
+  - validate via enforcement loop (Section 4.6); regenerate if invalid
   - write `assistantText`, prompt metadata
 - `RENDER_ARTIFACTS(sessionId)`
   - build transcript (screenplay)
@@ -1105,6 +1132,11 @@ Source-anchoring rules (apply when source text is available):
 - If the student's paraphrase contradicts the source text, quote the source and ask them to reconcile.
 - If the student presents their own conclusion as the author's, ask them to distinguish.
 - Never explain what the source text means. Only use it to challenge, demand evidence, or flag contradictions.
+
+Content question handling (when student asks about material):
+- If the student asks for a summary, explanation, or meaning of source content, redirect Socratically: "What do you think the author means? Paraphrase it."
+- If the student asks again or says they are stuck, provide a partial scaffold — quote a relevant passage, narrow the question, or highlight a structural clue. Never provide the full answer.
+- Never summarize, interpret, or explain the source for the student. Give them something to push against, not something to copy.
 
 Session context:
 - Topic: {{topic.title}} ({{topic.description}})
