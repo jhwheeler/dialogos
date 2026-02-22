@@ -7,8 +7,8 @@ export const UpdateOneTopicApiParamsSchema = z.object({
 export type UpdateOneTopicApiParams = z.infer<typeof UpdateOneTopicApiParamsSchema>;
 
 export const UpdateOneTopicApiBodySchema = z.object({
-  title: z.string().optional(),
-  description: z.string().optional(),
+  title: z.string().min(1).max(500).optional(),
+  description: z.string().max(5000).optional(),
 });
 
 export type UpdateOneTopicApiBody = z.infer<typeof UpdateOneTopicApiBodySchema>;

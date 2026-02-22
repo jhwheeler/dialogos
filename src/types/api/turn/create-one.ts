@@ -7,7 +7,14 @@ export const CreateOneTurnApiParamsSchema = z.object({
 export type CreateOneTurnApiParams = z.infer<typeof CreateOneTurnApiParamsSchema>;
 
 export const CreateOneTurnApiBodySchema = z.object({
-  studentAudioKey: z.string(),
+  studentAudioKey: z
+    .string()
+    .min(1)
+    .max(1000)
+    .regex(
+      /^turns\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/audio\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/.+$/,
+      "Invalid audio storage key format",
+    ),
 });
 
 export type CreateOneTurnApiBody = z.infer<typeof CreateOneTurnApiBodySchema>;

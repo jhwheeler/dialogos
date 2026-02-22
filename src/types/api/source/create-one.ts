@@ -8,10 +8,10 @@ export type CreateOneSourceApiParams = z.infer<typeof CreateOneSourceApiParamsSc
 
 export const CreateOneSourceApiBodySchema = z.object({
   sourceType: z.enum(["photo_ocr", "document", "reference", "voice_summary"]),
-  title: z.string(),
-  citation: z.string().optional(),
+  title: z.string().min(1).max(500),
+  citation: z.string().max(1000).optional(),
   topicFileId: z.string().uuid().optional(),
-  extractedText: z.string().optional(),
+  extractedText: z.string().max(500_000).optional(),
 });
 
 export type CreateOneSourceApiBody = z.infer<typeof CreateOneSourceApiBodySchema>;

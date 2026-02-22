@@ -1,4 +1,6 @@
 import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import sensible from "@fastify/sensible";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
@@ -28,14 +30,35 @@ export function buildApp() {
   const prisma = getPrismaClient();
   const container = createContainer(prisma, env);
 
-  const app = Fastify({ logger: loggerConfig });
+  const app = Fastify({
+    logger: loggerConfig,
+    bodyLimit: 1_048_576, // 1 MB default; routes needing more override per-route
+  });
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
   registerErrorHandler(app);
 
-  app.register(cors, { origin: true });
+  // CORS: explicit origin allowlist in production, permissive in dev/test
+  if (env.NODE_ENV === "production" && !env.CORS_ORIGIN) {
+    throw new Error("CORS_ORIGIN must be set in production");
+  }
+  const corsOrigin = env.CORS_ORIGIN ? env.CORS_ORIGIN.split(",").map((o) => o.trim()) : true; // permissive only in dev/test
+  app.register(cors, { origin: corsOrigin, credentials: true });
+
+  // Security headers (HSTS, X-Content-Type-Options, etc.)
+  app.register(helmet, {
+    contentSecurityPolicy: false, // API-only, no HTML to protect
+    hsts: { maxAge: 31536000 },
+  });
+
+  // Rate limiting: 100 requests per minute per client
+  app.register(rateLimit, {
+    max: 100,
+    timeWindow: "1 minute",
+  });
+
   app.register(sensible);
 
   app.register(swagger, {
@@ -57,10 +80,16 @@ export function buildApp() {
     transform: jsonSchemaTransform,
   });
 
-  app.register(swaggerUi, { routePrefix: "/docs" });
+  // Swagger UI only available in non-production environments
+  if (env.NODE_ENV !== "production") {
+    app.register(swaggerUi, { routePrefix: "/docs" });
+  }
 
   app.register(containerPlugin, { container });
-  app.register(authPlugin, { supabaseJwtSecret: env.SUPABASE_JWT_SECRET });
+  app.register(authPlugin, {
+    supabaseJwtSecret: env.SUPABASE_JWT_SECRET,
+    supabaseJwtIssuer: env.SUPABASE_JWT_ISSUER,
+  });
 
   app.register(async (v1) => {
     await v1.register(healthRoutes, { prefix: "/v1" });

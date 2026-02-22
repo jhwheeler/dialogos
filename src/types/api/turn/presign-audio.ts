@@ -8,8 +8,11 @@ export type PresignAudioTurnApiParams = z.infer<typeof PresignAudioTurnApiParams
 
 export const PresignAudioTurnApiBodySchema = z.object({
   originalName: z.string().min(1).max(255),
-  mimeType: z.string().regex(/^audio\//, "mimeType must start with 'audio/'"),
-  sizeBytes: z.coerce.number().int().positive(),
+  mimeType: z.enum(
+    ["audio/webm", "audio/mp4", "audio/mpeg", "audio/ogg", "audio/wav", "audio/aac", "audio/flac"],
+    { errorMap: () => ({ message: "Unsupported audio MIME type" }) },
+  ),
+  sizeBytes: z.coerce.number().int().positive().max(10_485_760, "Audio file must be 10 MB or less"),
 });
 
 export type PresignAudioTurnApiBody = z.infer<typeof PresignAudioTurnApiBodySchema>;

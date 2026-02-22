@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const CreateOneStudentDataSourceInputSchema = z.object({
   email: z.string().email().optional(),
-  displayName: z.string(),
+  displayName: z.string().min(1).max(500),
 });
 
 export type CreateOneStudentDataSourceInput = z.infer<typeof CreateOneStudentDataSourceInputSchema>;
@@ -13,7 +13,9 @@ export const CreateOneStudentDataSourceOutputSchema = z.object({
   displayName: z.string(),
   plan: z.enum(["free", "paid"]),
   trialRemainingSeconds: z.number().int(),
-  settings: z.unknown(),
+  voiceRate: z.number().nullable(),
+  autoplay: z.boolean().nullable(),
+  strictness: z.enum(["low", "medium", "high"]).nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   deletedAt: z.coerce.date().nullable(),

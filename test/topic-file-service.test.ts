@@ -173,6 +173,8 @@ describe("TopicFileService", () => {
       expect(storage.getPresignedUploadUrl).toHaveBeenCalledWith(
         expect.stringContaining("notes.pdf"),
         "application/pdf",
+        undefined,
+        100,
       );
     });
 

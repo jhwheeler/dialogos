@@ -1,11 +1,12 @@
 import { z } from "zod";
 
+/** Client-facing update: plan and trialRemainingSeconds are server-only. */
 export const UpdateOneStudentServiceInputSchema = z.object({
   id: z.string().uuid(),
-  displayName: z.string().optional(),
-  settings: z.record(z.unknown()).optional(),
-  plan: z.enum(["free", "paid"]).optional(),
-  trialRemainingSeconds: z.number().int().optional(),
+  displayName: z.string().min(1).max(500).optional(),
+  voiceRate: z.number().min(0.5).max(2.0).nullable().optional(),
+  autoplay: z.boolean().nullable().optional(),
+  strictness: z.enum(["low", "medium", "high"]).nullable().optional(),
 });
 
 export type UpdateOneStudentServiceInput = z.infer<typeof UpdateOneStudentServiceInputSchema>;
@@ -16,7 +17,9 @@ export const UpdateOneStudentServiceOutputSchema = z.object({
   displayName: z.string(),
   plan: z.enum(["free", "paid"]),
   trialRemainingSeconds: z.number().int(),
-  settings: z.record(z.unknown()),
+  voiceRate: z.number().nullable(),
+  autoplay: z.boolean().nullable(),
+  strictness: z.enum(["low", "medium", "high"]).nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
