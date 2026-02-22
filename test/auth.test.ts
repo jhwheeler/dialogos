@@ -72,9 +72,7 @@ describe("Authentication edge cases", () => {
   it("returns 401 when token is signed with the wrong secret", async () => {
     const server = await getApp();
 
-    const wrongSecret = new TextEncoder().encode(
-      "wrong-secret-key-that-is-at-least-32-chars-long",
-    );
+    const wrongSecret = new TextEncoder().encode("wrong-secret-key-that-is-at-least-32-chars-long");
     const token = await new SignJWT({ sub: "some-student-id" })
       .setProtectedHeader({ alg: "HS256" })
       .setExpirationTime("1h")
@@ -94,9 +92,7 @@ describe("Authentication edge cases", () => {
   it("returns 401 when token is expired", async () => {
     const server = await getApp();
 
-    const secret = new TextEncoder().encode(
-      "test-secret-key-must-be-at-least-32-characters",
-    );
+    const secret = new TextEncoder().encode("test-secret-key-must-be-at-least-32-characters");
     const token = await new SignJWT({ sub: "some-student-id" })
       .setProtectedHeader({ alg: "HS256" })
       .setExpirationTime("-1h")
@@ -116,9 +112,7 @@ describe("Authentication edge cases", () => {
   it("returns 401 when token is missing the sub claim", async () => {
     const server = await getApp();
 
-    const secret = new TextEncoder().encode(
-      "test-secret-key-must-be-at-least-32-characters",
-    );
+    const secret = new TextEncoder().encode("test-secret-key-must-be-at-least-32-characters");
     // JWT without `sub` claim
     const token = await new SignJWT({ email: "test@example.com" })
       .setProtectedHeader({ alg: "HS256" })
