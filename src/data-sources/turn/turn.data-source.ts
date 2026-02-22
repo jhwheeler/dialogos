@@ -6,6 +6,8 @@ import type {
   GetManyTurnDataSourceOutput,
   CreateOneTurnDataSourceInput,
   CreateOneTurnDataSourceOutput,
+  UpdateOneTurnDataSourceInput,
+  UpdateOneTurnDataSourceOutput,
   CountBySessionTurnDataSourceInput,
 } from "../../types/data-source/turn/index.js";
 
@@ -36,6 +38,26 @@ export class TurnDataSource {
         index: input.index,
         studentAudioKey: input.studentAudioKey,
       },
+    });
+  }
+
+  public async updateOne(
+    input: UpdateOneTurnDataSourceInput,
+  ): Promise<UpdateOneTurnDataSourceOutput> {
+    const { id, ...fields } = input;
+
+    // Build data object with only the fields that were explicitly provided
+    const data: Record<string, unknown> = {};
+    if ("studentText" in fields) data.studentText = fields.studentText;
+    if ("assistantText" in fields) data.assistantText = fields.assistantText;
+    if ("assistantPromptType" in fields) data.assistantPromptType = fields.assistantPromptType;
+    if ("assistantDetectedIssue" in fields)
+      data.assistantDetectedIssue = fields.assistantDetectedIssue;
+    if ("latencyMs" in fields) data.latencyMs = fields.latencyMs;
+
+    return this.prisma.turn.update({
+      where: { id },
+      data,
     });
   }
 

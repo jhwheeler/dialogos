@@ -100,5 +100,10 @@ export function buildApp() {
     await v1.register(turnRoutes, { prefix: "/v1" });
   });
 
+  // Drain the job queue on shutdown so in-flight jobs complete
+  app.addHook("onClose", async () => {
+    await container.jobQueue.shutdown();
+  });
+
   return app;
 }
