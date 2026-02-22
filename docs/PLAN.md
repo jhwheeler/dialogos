@@ -4,6 +4,17 @@ Extracted from [TECH_SPEC.md](./TECH_SPEC.md) Section 16. This document tracks t
 
 ---
 
+## Security hardening gate (cross-phase)
+
+- See [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) for current findings and priorities.
+- Before Phase 3 (queue/STT/model) and Phase 5 (billing), complete P0/P1 security hardening items:
+  - strict JWT claim validation and CORS allowlist configuration
+  - upload hardening (allowlists, size limits, storage-key binding)
+  - rate limiting and production API docs exposure controls
+  - webhook signature verification + replay/idempotency protections
+
+---
+
 ## Phase 0: foundations (done)
 
 - Repo setup (backend + mobile)
