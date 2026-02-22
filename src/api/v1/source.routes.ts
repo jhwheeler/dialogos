@@ -38,12 +38,8 @@ export const sourceRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({
-        sources: serviceOutput.map((source) => ({
-          ...source,
-          createdAt: source.createdAt.toISOString(),
-        })),
-      });
+      const output = GetManySourceApiOutputSchema.parse({ sources: serviceOutput });
+      return reply.send(output);
     },
   );
 
@@ -67,10 +63,8 @@ export const sourceRoutes: FastifyPluginAsync = async (fastify) => {
         ...request.body,
       });
 
-      return reply.status(201).send({
-        ...serviceOutput,
-        createdAt: serviceOutput.createdAt.toISOString(),
-      });
+      const output = CreateOneSourceApiOutputSchema.parse(serviceOutput);
+      return reply.status(201).send(output);
     },
   );
 
@@ -92,10 +86,8 @@ export const sourceRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({
-        ...serviceOutput,
-        createdAt: serviceOutput.createdAt.toISOString(),
-      });
+      const output = GetOneSourceApiOutputSchema.parse(serviceOutput);
+      return reply.send(output);
     },
   );
 
@@ -119,10 +111,8 @@ export const sourceRoutes: FastifyPluginAsync = async (fastify) => {
         ...request.body,
       });
 
-      return reply.send({
-        ...serviceOutput,
-        createdAt: serviceOutput.createdAt.toISOString(),
-      });
+      const output = UpdateOneSourceApiOutputSchema.parse(serviceOutput);
+      return reply.send(output);
     },
   );
 

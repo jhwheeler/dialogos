@@ -36,12 +36,8 @@ export const topicFileRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({
-        files: serviceOutput.map((file) => ({
-          ...file,
-          createdAt: file.createdAt.toISOString(),
-        })),
-      });
+      const output = GetManyTopicFileApiOutputSchema.parse({ files: serviceOutput });
+      return reply.send(output);
     },
   );
 
@@ -96,10 +92,8 @@ export const topicFileRoutes: FastifyPluginAsync = async (fastify) => {
         sizeBytes: request.body.sizeBytes,
       });
 
-      return reply.status(201).send({
-        ...serviceOutput,
-        createdAt: serviceOutput.createdAt.toISOString(),
-      });
+      const output = CreateOneTopicFileApiOutputSchema.parse(serviceOutput);
+      return reply.status(201).send(output);
     },
   );
 

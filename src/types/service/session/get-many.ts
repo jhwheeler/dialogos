@@ -14,9 +14,9 @@ export const GetManySessionServiceOutputSchema = z.array(
     sourceId: z.string().uuid().nullable(),
     triviumStage: z.enum(["grammar", "logic", "rhetoric", "combined"]),
     status: z.enum(["draft", "active", "ended", "aborted"]),
-    startedAt: z.coerce.date().nullable(),
-    endedAt: z.coerce.date().nullable(),
-    createdAt: z.coerce.date(),
+    startedAt: z.string().datetime().nullable(),
+    endedAt: z.string().datetime().nullable(),
+    createdAt: z.string().datetime(),
   }),
 );
 

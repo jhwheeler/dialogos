@@ -34,13 +34,8 @@ export const topicRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({
-        topics: serviceOutput.map((topic) => ({
-          ...topic,
-          createdAt: topic.createdAt.toISOString(),
-          updatedAt: topic.updatedAt.toISOString(),
-        })),
-      });
+      const output = GetManyTopicApiOutputSchema.parse({ topics: serviceOutput });
+      return reply.send(output);
     },
   );
 
@@ -62,11 +57,8 @@ export const topicRoutes: FastifyPluginAsync = async (fastify) => {
         ...request.body,
       });
 
-      return reply.status(201).send({
-        ...serviceOutput,
-        createdAt: serviceOutput.createdAt.toISOString(),
-        updatedAt: serviceOutput.updatedAt.toISOString(),
-      });
+      const output = CreateOneTopicApiOutputSchema.parse(serviceOutput);
+      return reply.status(201).send(output);
     },
   );
 
@@ -88,11 +80,8 @@ export const topicRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({
-        ...serviceOutput,
-        createdAt: serviceOutput.createdAt.toISOString(),
-        updatedAt: serviceOutput.updatedAt.toISOString(),
-      });
+      const output = GetOneTopicApiOutputSchema.parse(serviceOutput);
+      return reply.send(output);
     },
   );
 
@@ -116,11 +105,8 @@ export const topicRoutes: FastifyPluginAsync = async (fastify) => {
         ...request.body,
       });
 
-      return reply.send({
-        ...serviceOutput,
-        createdAt: serviceOutput.createdAt.toISOString(),
-        updatedAt: serviceOutput.updatedAt.toISOString(),
-      });
+      const output = UpdateOneTopicApiOutputSchema.parse(serviceOutput);
+      return reply.send(output);
     },
   );
 

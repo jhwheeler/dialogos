@@ -55,8 +55,8 @@ describe("TopicService", () => {
         id: topic.id,
         title: topic.title,
         description: topic.description,
-        createdAt: topic.createdAt,
-        updatedAt: topic.updatedAt,
+        createdAt: topic.createdAt.toISOString(),
+        updatedAt: topic.updatedAt.toISOString(),
       });
       expect(result).not.toHaveProperty("studentId");
       expect(result).not.toHaveProperty("deletedAt");
@@ -155,8 +155,8 @@ describe("TopicService", () => {
         id: topic.id,
         title: topic.title,
         description: topic.description,
-        createdAt: topic.createdAt,
-        updatedAt: topic.updatedAt,
+        createdAt: topic.createdAt.toISOString(),
+        updatedAt: topic.updatedAt.toISOString(),
       });
     });
 

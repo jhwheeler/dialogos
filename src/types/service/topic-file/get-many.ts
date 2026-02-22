@@ -15,7 +15,7 @@ export const GetManyTopicFileServiceOutputSchema = z.array(
     originalName: z.string(),
     mimeType: z.string().nullable(),
     sizeBytes: z.number(),
-    createdAt: z.coerce.date(),
+    createdAt: z.string().datetime(),
   }),
 );
 

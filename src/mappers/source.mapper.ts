@@ -16,7 +16,7 @@ function sourceFromDataSourceToService(
     citation: input.citation,
     extractedText: input.extractedText,
     groundingTier: input.groundingTier,
-    createdAt: input.createdAt,
+    createdAt: input.createdAt.toISOString(),
   };
 }
 
