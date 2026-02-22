@@ -17,11 +17,14 @@ export class S3Storage {
             }),
         });
     }
-    async getPresignedUploadUrl(key, contentType, expiresInSeconds = 3600) {
+    async getPresignedUploadUrl(key, contentType, expiresInSeconds = 3600, contentLength) {
         const command = new PutObjectCommand({
             Bucket: this.bucket,
             Key: key,
             ContentType: contentType,
+            // ContentLength is signed into the presigned URL — S3 rejects uploads
+            // that don't match this exact byte size.
+            ...(contentLength !== undefined && { ContentLength: contentLength }),
         });
         return getSignedUrl(this.client, command, {
             expiresIn: expiresInSeconds,

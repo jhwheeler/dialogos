@@ -2,10 +2,10 @@ import { z } from "zod";
 export const PresignUploadTopicFileServiceInputSchema = z.object({
     topicId: z.string().uuid(),
     studentId: z.string().uuid(),
-    kind: z.string(),
-    originalName: z.string(),
-    mimeType: z.string(),
-    sizeBytes: z.number(),
+    kind: z.enum(["pdf", "image", "text", "other"]),
+    originalName: z.string().min(1).max(500),
+    mimeType: z.string().min(1).max(255),
+    sizeBytes: z.number().int().positive().max(52_428_800),
 });
 export const PresignUploadTopicFileServiceOutputSchema = z.object({
     uploadUrl: z.string(),

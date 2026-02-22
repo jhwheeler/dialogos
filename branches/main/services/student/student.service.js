@@ -33,9 +33,9 @@ export class StudentService {
         const updated = await this.studentDataSource.updateOne({
             id: input.id,
             displayName: input.displayName,
-            settings: input.settings,
-            plan: input.plan,
-            trialRemainingSeconds: input.trialRemainingSeconds,
+            voiceRate: input.voiceRate,
+            autoplay: input.autoplay,
+            strictness: input.strictness,
         });
         return StudentMapper.updateOne.output.fromDataSourceToService(updated);
     }
