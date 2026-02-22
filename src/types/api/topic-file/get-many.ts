@@ -7,7 +7,7 @@ export const GetManyTopicFileApiInputSchema = z.object({
 export type GetManyTopicFileApiInput = z.infer<typeof GetManyTopicFileApiInputSchema>;
 
 export const GetManyTopicFileApiOutputSchema = z.object({
-  files: z.array(
+  items: z.array(
     z.object({
       id: z.string().uuid(),
       kind: z.string(),
@@ -18,6 +18,7 @@ export const GetManyTopicFileApiOutputSchema = z.object({
       createdAt: z.string().datetime(),
     }),
   ),
+  count: z.number().int(),
 });
 
 export type GetManyTopicFileApiOutput = z.infer<typeof GetManyTopicFileApiOutputSchema>;

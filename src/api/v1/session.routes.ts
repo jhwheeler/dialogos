@@ -15,18 +15,6 @@ import {
   DeleteOneSessionApiOutputSchema,
 } from "../../types/api/session/index.js";
 
-function formatSessionDates(session: {
-  startedAt: Date | null;
-  endedAt: Date | null;
-  createdAt: Date;
-}) {
-  return {
-    startedAt: session.startedAt?.toISOString() ?? null,
-    endedAt: session.endedAt?.toISOString() ?? null,
-    createdAt: session.createdAt.toISOString(),
-  };
-}
-
 export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   const sessionService = fastify.container.services.session as SessionService;
@@ -49,12 +37,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({
-        sessions: serviceOutput.map((session) => ({
-          ...session,
-          ...formatSessionDates(session),
-        })),
-      });
+      return reply.send({ items: serviceOutput, count: serviceOutput.length });
     },
   );
 
@@ -78,10 +61,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
         ...request.body,
       });
 
-      return reply.status(201).send({
-        ...serviceOutput,
-        ...formatSessionDates(serviceOutput),
-      });
+      return reply.status(201).send(serviceOutput);
     },
   );
 
@@ -103,10 +83,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({
-        ...serviceOutput,
-        ...formatSessionDates(serviceOutput),
-      });
+      return reply.send(serviceOutput);
     },
   );
 
@@ -128,10 +105,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({
-        ...serviceOutput,
-        ...formatSessionDates(serviceOutput),
-      });
+      return reply.send(serviceOutput);
     },
   );
 
@@ -153,10 +127,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({
-        ...serviceOutput,
-        ...formatSessionDates(serviceOutput),
-      });
+      return reply.send(serviceOutput);
     },
   );
 
@@ -178,10 +149,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({
-        ...serviceOutput,
-        ...formatSessionDates(serviceOutput),
-      });
+      return reply.send(serviceOutput);
     },
   );
 

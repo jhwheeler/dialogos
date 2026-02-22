@@ -14,12 +14,6 @@ import {
   GetManyTurnApiOutputSchema,
 } from "../../types/api/turn/index.js";
 
-function formatTurnDates(turn: { createdAt: Date }) {
-  return {
-    createdAt: turn.createdAt.toISOString(),
-  };
-}
-
 export const turnRoutes: FastifyPluginAsync = async (fastify) => {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   const turnService = fastify.container.services.turn as TurnService;
@@ -70,10 +64,7 @@ export const turnRoutes: FastifyPluginAsync = async (fastify) => {
         studentAudioKey: request.body.studentAudioKey,
       });
 
-      return reply.status(201).send({
-        ...serviceOutput,
-        ...formatTurnDates(serviceOutput),
-      });
+      return reply.status(201).send(serviceOutput);
     },
   );
 
@@ -96,10 +87,7 @@ export const turnRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({
-        ...serviceOutput,
-        ...formatTurnDates(serviceOutput),
-      });
+      return reply.send(serviceOutput);
     },
   );
 
@@ -121,12 +109,7 @@ export const turnRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({
-        turns: serviceOutput.map((turn) => ({
-          ...turn,
-          ...formatTurnDates(turn),
-        })),
-      });
+      return reply.send({ items: serviceOutput, count: serviceOutput.length });
     },
   );
 };

@@ -19,7 +19,7 @@ export const CreateOneTopicFileServiceOutputSchema = z.object({
   originalName: z.string(),
   mimeType: z.string().nullable(),
   sizeBytes: z.number(),
-  createdAt: z.coerce.date(),
+  createdAt: z.string().datetime(),
 });
 
 export type CreateOneTopicFileServiceOutput = z.infer<typeof CreateOneTopicFileServiceOutputSchema>;

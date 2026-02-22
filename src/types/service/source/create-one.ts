@@ -21,7 +21,7 @@ export const CreateOneSourceServiceOutputSchema = z.object({
   citation: z.string().nullable(),
   extractedText: z.string().nullable(),
   groundingTier: z.number().int(),
-  createdAt: z.coerce.date(),
+  createdAt: z.string().datetime(),
 });
 
 export type CreateOneSourceServiceOutput = z.infer<typeof CreateOneSourceServiceOutputSchema>;

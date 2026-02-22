@@ -13,9 +13,9 @@ function sessionFromDataSourceToService(
     sourceId: input.sourceId,
     triviumStage: input.triviumStage,
     status: input.status,
-    startedAt: input.startedAt,
-    endedAt: input.endedAt,
-    createdAt: input.createdAt,
+    startedAt: input.startedAt?.toISOString() ?? null,
+    endedAt: input.endedAt?.toISOString() ?? null,
+    createdAt: input.createdAt.toISOString(),
   };
 }
 

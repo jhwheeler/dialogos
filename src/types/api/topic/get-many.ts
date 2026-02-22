@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const GetManyTopicApiOutputSchema = z.object({
-  topics: z.array(
+  items: z.array(
     z.object({
       id: z.string().uuid(),
       title: z.string(),
@@ -10,6 +10,7 @@ export const GetManyTopicApiOutputSchema = z.object({
       updatedAt: z.string().datetime(),
     }),
   ),
+  count: z.number().int(),
 });
 
 export type GetManyTopicApiOutput = z.infer<typeof GetManyTopicApiOutputSchema>;

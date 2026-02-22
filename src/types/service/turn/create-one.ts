@@ -18,7 +18,7 @@ export const CreateOneTurnServiceOutputSchema = z.object({
   assistantPromptType: z.string().nullable(),
   assistantDetectedIssue: z.string().nullable(),
   latencyMs: z.number().int().nullable(),
-  createdAt: z.coerce.date(),
+  createdAt: z.string().datetime(),
 });
 
 export type CreateOneTurnServiceOutput = z.infer<typeof CreateOneTurnServiceOutputSchema>;

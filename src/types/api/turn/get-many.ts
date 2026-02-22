@@ -7,7 +7,7 @@ export const GetManyTurnApiParamsSchema = z.object({
 export type GetManyTurnApiParams = z.infer<typeof GetManyTurnApiParamsSchema>;
 
 export const GetManyTurnApiOutputSchema = z.object({
-  turns: z.array(
+  items: z.array(
     z.object({
       id: z.string().uuid(),
       sessionId: z.string().uuid(),
@@ -21,6 +21,7 @@ export const GetManyTurnApiOutputSchema = z.object({
       createdAt: z.string().datetime(),
     }),
   ),
+  count: z.number().int(),
 });
 
 export type GetManyTurnApiOutput = z.infer<typeof GetManyTurnApiOutputSchema>;

@@ -12,7 +12,7 @@ function turnFromDataSourceToService(input: GetOneTurnDataSourceOutput): GetOneT
     assistantPromptType: input.assistantPromptType,
     assistantDetectedIssue: input.assistantDetectedIssue,
     latencyMs: input.latencyMs,
-    createdAt: input.createdAt,
+    createdAt: input.createdAt.toISOString(),
   };
 }
 

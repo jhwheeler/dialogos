@@ -36,12 +36,7 @@ export const topicFileRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({
-        files: serviceOutput.map((file) => ({
-          ...file,
-          createdAt: file.createdAt.toISOString(),
-        })),
-      });
+      return reply.send({ items: serviceOutput, count: serviceOutput.length });
     },
   );
 
@@ -96,10 +91,7 @@ export const topicFileRoutes: FastifyPluginAsync = async (fastify) => {
         sizeBytes: request.body.sizeBytes,
       });
 
-      return reply.status(201).send({
-        ...serviceOutput,
-        createdAt: serviceOutput.createdAt.toISOString(),
-      });
+      return reply.status(201).send(serviceOutput);
     },
   );
 

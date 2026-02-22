@@ -72,7 +72,7 @@ describe("Source CRUD routes", () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({ sources: [] });
+      expect(response.json()).toEqual({ items: [], count: 0 });
     });
 
     it("returns only non-deleted sources for the topic", async () => {
@@ -102,8 +102,9 @@ describe("Source CRUD routes", () => {
 
       expect(response.statusCode).toBe(200);
       const body = response.json();
-      expect(body.sources).toHaveLength(1);
-      expect(body.sources[0].title).toBe("Active Source");
+      expect(body.items).toHaveLength(1);
+      expect(body.count).toBe(1);
+      expect(body.items[0].title).toBe("Active Source");
     });
 
     it("returns 404 when accessing another student's topic sources", async () => {
@@ -383,7 +384,7 @@ describe("Source CRUD routes", () => {
         url: `/v1/topics/${topicAId}/sources`,
         headers: authHeader(tokenA),
       });
-      expect(listResponse.json().sources).toHaveLength(0);
+      expect(listResponse.json().items).toHaveLength(0);
 
       // Verify GET by id returns 404
       const getResponse = await app.inject({
