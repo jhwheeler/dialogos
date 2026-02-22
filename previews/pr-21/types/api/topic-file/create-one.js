@@ -6,7 +6,7 @@ export const CreateOneTopicFileApiBodySchema = z.object({
     storageKey: z
         .string()
         .max(1000)
-        .regex(/^topics\/[a-f0-9-]{36}\/files\/[a-f0-9-]{36}\/.+$/, "Invalid storage key format"),
+        .regex(/^topics\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/files\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/.+$/, "Invalid storage key format"),
     kind: z.enum(["pdf", "image", "text", "other"]),
     originalName: z.string().min(1).max(500),
     mimeType: z.string().max(255).optional(),

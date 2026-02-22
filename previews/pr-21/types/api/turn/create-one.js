@@ -7,7 +7,7 @@ export const CreateOneTurnApiBodySchema = z.object({
         .string()
         .min(1)
         .max(1000)
-        .regex(/^turns\/[a-f0-9-]{36}\/audio\/[a-f0-9-]{36}\/.+$/, "Invalid audio storage key format"),
+        .regex(/^turns\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/audio\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/.+$/, "Invalid audio storage key format"),
 });
 export const CreateOneTurnApiOutputSchema = z.object({
     id: z.string().uuid(),

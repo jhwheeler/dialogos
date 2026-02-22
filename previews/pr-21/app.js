@@ -31,11 +31,10 @@ export function buildApp() {
     app.setSerializerCompiler(serializerCompiler);
     registerErrorHandler(app);
     // CORS: explicit origin allowlist in production, permissive in dev/test
-    const corsOrigin = env.CORS_ORIGIN
-        ? env.CORS_ORIGIN.split(",").map((o) => o.trim())
-        : env.NODE_ENV === "production"
-            ? false
-            : true; // permissive only in dev/test
+    if (env.NODE_ENV === "production" && !env.CORS_ORIGIN) {
+        throw new Error("CORS_ORIGIN must be set in production");
+    }
+    const corsOrigin = env.CORS_ORIGIN ? env.CORS_ORIGIN.split(",").map((o) => o.trim()) : true; // permissive only in dev/test
     app.register(cors, { origin: corsOrigin, credentials: true });
     // Security headers (HSTS, X-Content-Type-Options, etc.)
     app.register(helmet, {
