@@ -55,6 +55,10 @@ export class TurnDataSource {
       data.assistantDetectedIssue = fields.assistantDetectedIssue;
     if ("latencyMs" in fields) data.latencyMs = fields.latencyMs;
 
+    if (Object.keys(data).length === 0) {
+      throw new Error("updateOne requires at least one field to update");
+    }
+
     return this.prisma.turn.update({
       where: { id },
       data,

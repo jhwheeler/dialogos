@@ -36,10 +36,4 @@ export class TurnMapper {
       fromDataSourceToService: turnFromDataSourceToService,
     },
   };
-
-  public static readonly updateOne = {
-    output: {
-      fromDataSourceToService: turnFromDataSourceToService,
-    },
-  };
 }

@@ -102,11 +102,15 @@ export class TurnService {
           studentAudioKey: input.studentAudioKey,
         });
 
-        // Fire-and-forget: enqueue async transcription pipeline
-        await this.jobQueue.enqueue({
-          jobType: JobType.TRANSCRIBE_TURN,
-          turnId: turn.id,
-        });
+        // Best-effort: enqueue async transcription pipeline
+        try {
+          await this.jobQueue.enqueue({
+            jobType: JobType.TRANSCRIBE_TURN,
+            turnId: turn.id,
+          });
+        } catch (enqueueError) {
+          console.error("Failed to enqueue TRANSCRIBE_TURN job for turn %s:", turn.id, enqueueError);
+        }
 
         return TurnMapper.createOne.output.fromDataSourceToService(turn);
       } catch (error) {

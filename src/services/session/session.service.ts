@@ -128,11 +128,15 @@ export class SessionService {
       throw new ConflictError("Cannot end session: invalid current status");
     }
 
-    // Enqueue artifact generation for the ended session
-    await this.jobQueue.enqueue({
-      jobType: JobType.RENDER_ARTIFACTS,
-      sessionId: input.id,
-    });
+    // Best-effort: enqueue artifact generation for the ended session
+    try {
+      await this.jobQueue.enqueue({
+        jobType: JobType.RENDER_ARTIFACTS,
+        sessionId: input.id,
+      });
+    } catch (error) {
+      console.error("Failed to enqueue RENDER_ARTIFACTS job for session %s:", input.id, error);
+    }
 
     return SessionMapper.endOne.output.fromDataSourceToService(updated);
   }

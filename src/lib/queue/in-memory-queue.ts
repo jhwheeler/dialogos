@@ -80,8 +80,8 @@ export class InMemoryJobQueue implements JobQueue {
   }
 
   public async shutdown(): Promise<void> {
-    await this.drain();
     this.stopped = true;
+    await this.drain();
     this.running = false;
   }
 
@@ -90,56 +90,51 @@ export class InMemoryJobQueue implements JobQueue {
       return;
     }
 
+    this.processing = true;
     setImmediate(() => {
-      void this.processNext();
+      void this.processLoop();
     });
   }
 
-  private async processNext(): Promise<void> {
-    if (this.pending.length === 0) {
-      this.processing = false;
-      this.resolveDrainers();
-      return;
-    }
+  private async processLoop(): Promise<void> {
+    while (this.pending.length > 0) {
+      const entry = this.pending.shift()!;
+      const handler = this.handlers.get(entry.payload.jobType);
 
-    this.processing = true;
-    const entry = this.pending.shift()!;
-    const handler = this.handlers.get(entry.payload.jobType);
-
-    if (!handler) {
-      this.logger.error(
-        { jobType: entry.payload.jobType },
-        "No handler registered for job type; dropping job",
-      );
-      await this.processNext();
-      return;
-    }
-
-    try {
-      this.logger.info(
-        { jobType: entry.payload.jobType, attempt: entry.attempt + 1 },
-        "Job processing started",
-      );
-      await handler(entry.payload);
-      this.logger.info({ jobType: entry.payload.jobType }, "Job completed successfully");
-    } catch (error) {
-      const nextAttempt = entry.attempt + 1;
-      if (nextAttempt < this.maxRetries) {
+      if (!handler) {
         this.logger.error(
-          { jobType: entry.payload.jobType, attempt: nextAttempt, error },
-          "Job failed; scheduling retry",
+          { jobType: entry.payload.jobType },
+          "No handler registered for job type; dropping job",
         );
-        this.pending.push({ payload: entry.payload, attempt: nextAttempt });
-      } else {
-        this.logger.error(
-          { jobType: entry.payload.jobType, attempt: nextAttempt, error },
-          "Job failed; max retries exhausted — dropping job",
+        continue;
+      }
+
+      try {
+        this.logger.info(
+          { jobType: entry.payload.jobType, attempt: entry.attempt + 1 },
+          "Job processing started",
         );
+        await handler(entry.payload);
+        this.logger.info({ jobType: entry.payload.jobType }, "Job completed successfully");
+      } catch (error) {
+        const nextAttempt = entry.attempt + 1;
+        if (nextAttempt < this.maxRetries) {
+          this.logger.error(
+            { jobType: entry.payload.jobType, attempt: nextAttempt, error },
+            "Job failed; scheduling retry",
+          );
+          this.pending.push({ payload: entry.payload, attempt: nextAttempt });
+        } else {
+          this.logger.error(
+            { jobType: entry.payload.jobType, attempt: nextAttempt, error },
+            "Job failed; max retries exhausted — dropping job",
+          );
+        }
       }
     }
 
-    // Continue processing remaining jobs
-    await this.processNext();
+    this.processing = false;
+    this.resolveDrainers();
   }
 
   private resolveDrainers(): void {
