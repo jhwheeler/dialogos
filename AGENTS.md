@@ -17,6 +17,7 @@ This repository is being prepared for AI-assisted development.
 
 ## Skills in this repo
 - `skills/backend-development/`
+- `skills/pr-review/`
 - `skills/prisma-workflow/`
 
 ## Notes
