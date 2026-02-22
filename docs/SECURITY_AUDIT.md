@@ -10,7 +10,7 @@
 - Ran baseline checks:
   - `npm audit --omit=dev` (result: **0 prod dependency vulnerabilities**)
   - `npm run lint` (passed)
-  - `npm run test` (failed in this environment due missing Postgres at `127.0.0.1:5432`)
+  - `npm run test` (failed in this environment due to missing Postgres at `127.0.0.1:5432`)
   - `npm run build` (passed)
 
 ## Existing strengths
