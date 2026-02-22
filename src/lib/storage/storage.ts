@@ -3,7 +3,8 @@ export interface StorageProvider {
     key: string,
     contentType: string,
     expiresInSeconds?: number,
-    maxContentLength?: number,
+    /** Exact byte size the upload must match (signed into the presigned URL). */
+    contentLength?: number,
   ): Promise<string>;
   deleteObject(key: string): Promise<void>;
 }

@@ -40,7 +40,7 @@ export function buildApp() {
 
   registerErrorHandler(app);
 
-  // --- Security: CORS with explicit allowlist (A7.1) ---
+  // CORS: explicit origin allowlist in production, permissive in dev/test
   const corsOrigin = env.CORS_ORIGIN
     ? env.CORS_ORIGIN.split(",").map((o) => o.trim())
     : env.NODE_ENV === "production"
@@ -48,13 +48,13 @@ export function buildApp() {
       : true; // permissive only in dev/test
   app.register(cors, { origin: corsOrigin, credentials: true });
 
-  // --- Security: HTTP headers (A7.2) ---
+  // Security headers (HSTS, X-Content-Type-Options, etc.)
   app.register(helmet, {
     contentSecurityPolicy: false, // API-only, no HTML to protect
     hsts: { maxAge: 31536000 },
   });
 
-  // --- Security: Rate limiting (A7.3) ---
+  // Rate limiting: 100 requests per minute per client
   app.register(rateLimit, {
     max: 100,
     timeWindow: "1 minute",
@@ -81,7 +81,7 @@ export function buildApp() {
     transform: jsonSchemaTransform,
   });
 
-  // --- Security: Swagger UI restricted to non-production (A3.2) ---
+  // Swagger UI only available in non-production environments
   if (env.NODE_ENV !== "production") {
     app.register(swaggerUi, { routePrefix: "/docs" });
   }

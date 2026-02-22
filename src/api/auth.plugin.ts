@@ -60,7 +60,7 @@ const authPlugin: FastifyPluginAsync<{
             "",
         });
 
-        // Evict oldest entries if cache is full (A1.2)
+        // Evict oldest entry if cache is full to bound memory growth
         if (knownStudents.size >= MAX_KNOWN_STUDENTS) {
           const first = knownStudents.values().next().value;
           if (first !== undefined) knownStudents.delete(first);
