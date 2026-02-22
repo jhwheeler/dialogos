@@ -63,6 +63,34 @@ export class SessionDataSource {
     });
   }
 
+  /**
+   * Atomically transition a session from expectedStatus to newStatus.
+   * Returns the updated session, or null if the current status didn't match
+   * (i.e. a concurrent transition already occurred).
+   */
+  public async transitionStatus(input: {
+    id: string;
+    expectedStatus: "draft" | "active" | "ended" | "aborted";
+    newStatus: "draft" | "active" | "ended" | "aborted";
+    startedAt?: Date;
+    endedAt?: Date;
+  }): Promise<UpdateOneSessionDataSourceOutput | null> {
+    const result = await this.prisma.session.updateMany({
+      where: { id: input.id, status: input.expectedStatus },
+      data: {
+        status: input.newStatus,
+        ...(input.startedAt !== undefined && { startedAt: input.startedAt }),
+        ...(input.endedAt !== undefined && { endedAt: input.endedAt }),
+      },
+    });
+
+    if (result.count === 0) {
+      return null;
+    }
+
+    return this.prisma.session.findUniqueOrThrow({ where: { id: input.id } });
+  }
+
   public async deleteOne(
     input: DeleteOneSessionDataSourceInput,
   ): Promise<DeleteOneSessionDataSourceOutput> {

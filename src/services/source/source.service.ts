@@ -13,20 +13,22 @@ import type {
 import { NotFoundError } from "../../errors/not-found-error.js";
 import { SourceDataSource } from "../../data-sources/source/source.data-source.js";
 import { TopicDataSource } from "../../data-sources/topic/topic.data-source.js";
+import { TopicFileDataSource } from "../../data-sources/topic-file/topic-file.data-source.js";
 import { SourceMapper } from "../../mappers/source.mapper.js";
 
 export class SourceService {
   public constructor(
     private readonly sourceDataSource: SourceDataSource,
     private readonly topicDataSource: TopicDataSource,
+    private readonly topicFileDataSource: TopicFileDataSource,
   ) {}
 
   /**
    * Derive grounding tier based on sourceType and whether extractedText is available.
    *
-   * Tier 1: extracted text available (photo_ocr, document with text)
-   * Tier 2: known/canonical text, no upload (reference type)
-   * Tier 3: obscure or no source text (voice_summary, or reference without text)
+   * Tier 1: extracted text available (any source type with text)
+   * Tier 2: reference without extracted text (known/canonical source)
+   * Tier 3: file-backed source without text yet, or voice summary
    */
   public static deriveGroundingTier(
     sourceType: "photo_ocr" | "document" | "reference" | "voice_summary",
@@ -90,6 +92,14 @@ export class SourceService {
     input: CreateOneSourceServiceInput,
   ): Promise<CreateOneSourceServiceOutput> {
     await this.verifyTopicOwnership(input.topicId, input.studentId);
+
+    if (input.topicFileId) {
+      const topicFile = await this.topicFileDataSource.getOne({ id: input.topicFileId });
+
+      if (!topicFile || topicFile.deletedAt !== null || topicFile.topicId !== input.topicId) {
+        throw new NotFoundError("Topic file not found");
+      }
+    }
 
     const groundingTier = SourceService.deriveGroundingTier(input.sourceType, input.extractedText);
 

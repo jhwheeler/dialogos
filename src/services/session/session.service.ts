@@ -18,12 +18,14 @@ import { NotFoundError } from "../../errors/not-found-error.js";
 import { ConflictError } from "../../errors/conflict-error.js";
 import { SessionDataSource } from "../../data-sources/session/session.data-source.js";
 import { TopicDataSource } from "../../data-sources/topic/topic.data-source.js";
+import { SourceDataSource } from "../../data-sources/source/source.data-source.js";
 import { SessionMapper } from "../../mappers/session.mapper.js";
 
 export class SessionService {
   public constructor(
     private readonly sessionDataSource: SessionDataSource,
     private readonly topicDataSource: TopicDataSource,
+    private readonly sourceDataSource: SourceDataSource,
   ) {}
 
   private async verifyTopicOwnership(topicId: string, studentId: string): Promise<void> {
@@ -49,6 +51,9 @@ export class SessionService {
       throw new NotFoundError("Session not found");
     }
 
+    // Verify the parent topic still exists and belongs to this student
+    await this.verifyTopicOwnership(session.topicId, input.studentId);
+
     return SessionMapper.getOne.output.fromDataSourceToService(session);
   }
 
@@ -68,6 +73,14 @@ export class SessionService {
   ): Promise<CreateOneSessionServiceOutput> {
     await this.verifyTopicOwnership(input.topicId, input.studentId);
 
+    if (input.sourceId) {
+      const source = await this.sourceDataSource.getOne({ id: input.sourceId });
+
+      if (!source || source.deletedAt !== null || source.topicId !== input.topicId) {
+        throw new NotFoundError("Source not found");
+      }
+    }
+
     const session = await this.sessionDataSource.createOne({
       studentId: input.studentId,
       topicId: input.topicId,
@@ -80,55 +93,64 @@ export class SessionService {
   }
 
   public async startOne(input: StartOneSessionServiceInput): Promise<StartOneSessionServiceOutput> {
-    const session = await this.getOne({ id: input.id, studentId: input.studentId });
+    // Verify ownership and existence
+    await this.getOne({ id: input.id, studentId: input.studentId });
 
-    if (session.status !== "draft") {
-      throw new ConflictError(
-        `Cannot start session: current status is '${session.status}', expected 'draft'`,
-      );
-    }
-
-    const updated = await this.sessionDataSource.updateOne({
+    // Atomic transition: only succeeds if current status is 'draft'
+    const updated = await this.sessionDataSource.transitionStatus({
       id: input.id,
-      status: "active",
+      expectedStatus: "draft",
+      newStatus: "active",
       startedAt: new Date(),
     });
+
+    if (!updated) {
+      // Re-read to get current status for the error message
+      const current = await this.sessionDataSource.getOne({ id: input.id });
+      throw new ConflictError(
+        `Cannot start session: current status is '${current?.status ?? "unknown"}', expected 'draft'`,
+      );
+    }
 
     return SessionMapper.startOne.output.fromDataSourceToService(updated);
   }
 
   public async endOne(input: EndOneSessionServiceInput): Promise<EndOneSessionServiceOutput> {
-    const session = await this.getOne({ id: input.id, studentId: input.studentId });
+    await this.getOne({ id: input.id, studentId: input.studentId });
 
-    if (session.status !== "active") {
-      throw new ConflictError(
-        `Cannot end session: current status is '${session.status}', expected 'active'`,
-      );
-    }
-
-    const updated = await this.sessionDataSource.updateOne({
+    const updated = await this.sessionDataSource.transitionStatus({
       id: input.id,
-      status: "ended",
+      expectedStatus: "active",
+      newStatus: "ended",
       endedAt: new Date(),
     });
+
+    if (!updated) {
+      const current = await this.sessionDataSource.getOne({ id: input.id });
+      throw new ConflictError(
+        `Cannot end session: current status is '${current?.status ?? "unknown"}', expected 'active'`,
+      );
+    }
 
     return SessionMapper.endOne.output.fromDataSourceToService(updated);
   }
 
   public async abortOne(input: AbortOneSessionServiceInput): Promise<AbortOneSessionServiceOutput> {
-    const session = await this.getOne({ id: input.id, studentId: input.studentId });
+    await this.getOne({ id: input.id, studentId: input.studentId });
 
-    if (session.status !== "active") {
-      throw new ConflictError(
-        `Cannot abort session: current status is '${session.status}', expected 'active'`,
-      );
-    }
-
-    const updated = await this.sessionDataSource.updateOne({
+    const updated = await this.sessionDataSource.transitionStatus({
       id: input.id,
-      status: "aborted",
+      expectedStatus: "active",
+      newStatus: "aborted",
       endedAt: new Date(),
     });
+
+    if (!updated) {
+      const current = await this.sessionDataSource.getOne({ id: input.id });
+      throw new ConflictError(
+        `Cannot abort session: current status is '${current?.status ?? "unknown"}', expected 'active'`,
+      );
+    }
 
     return SessionMapper.abortOne.output.fromDataSourceToService(updated);
   }

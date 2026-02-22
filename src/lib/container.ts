@@ -61,13 +61,13 @@ export function createContainer(prisma: PrismaClient, env: AppEnv): AppContainer
   services.topicFile = topicFileService;
 
   const sourceDataSource = new SourceDataSource(prisma);
-  const sourceService = new SourceService(sourceDataSource, topicDataSource);
+  const sourceService = new SourceService(sourceDataSource, topicDataSource, topicFileDataSource);
 
   dataSources.source = sourceDataSource;
   services.source = sourceService;
 
   const sessionDataSource = new SessionDataSource(prisma);
-  const sessionService = new SessionService(sessionDataSource, topicDataSource);
+  const sessionService = new SessionService(sessionDataSource, topicDataSource, sourceDataSource);
 
   dataSources.session = sessionDataSource;
   services.session = sessionService;
