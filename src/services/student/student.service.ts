@@ -60,7 +60,9 @@ export class StudentService {
     const updated = await this.studentDataSource.updateOne({
       id: input.id,
       displayName: input.displayName,
-      settings: input.settings,
+      voiceRate: input.voiceRate,
+      autoplay: input.autoplay,
+      strictness: input.strictness,
     });
 
     return StudentMapper.updateOne.output.fromDataSourceToService(updated);

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { StudentSettingsSchema } from "../../shared/student-settings.js";
 
 export const GetOneStudentServiceInputSchema = z.object({
   id: z.string().uuid(),
@@ -13,7 +12,9 @@ export const GetOneStudentServiceOutputSchema = z.object({
   displayName: z.string(),
   plan: z.enum(["free", "paid"]),
   trialRemainingSeconds: z.number().int(),
-  settings: StudentSettingsSchema,
+  voiceRate: z.number().nullable(),
+  autoplay: z.boolean().nullable(),
+  strictness: z.enum(["low", "medium", "high"]).nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });

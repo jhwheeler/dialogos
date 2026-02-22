@@ -7,15 +7,15 @@ export const CreateOneStudentDataSourceInputSchema = z.object({
 
 export type CreateOneStudentDataSourceInput = z.infer<typeof CreateOneStudentDataSourceInputSchema>;
 
-// Output uses z.unknown() for settings because Prisma returns JsonValue.
-// Strict validation happens in the service/mapper layer.
 export const CreateOneStudentDataSourceOutputSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email().nullable(),
   displayName: z.string(),
   plan: z.enum(["free", "paid"]),
   trialRemainingSeconds: z.number().int(),
-  settings: z.unknown(),
+  voiceRate: z.number().nullable(),
+  autoplay: z.boolean().nullable(),
+  strictness: z.enum(["low", "medium", "high"]).nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   deletedAt: z.coerce.date().nullable(),

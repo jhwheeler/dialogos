@@ -529,7 +529,7 @@ File uploads:
 - `sizeBytes`: max 50 MB (`52_428_800`)
 - `storageKey`: validated against regex `^topics/[a-f0-9-]{36}/files/[a-f0-9-]{36}/.+$`
 
-Student settings: strict schema — `{ voiceRate?: number, autoplay?: boolean, strictness?: "low" | "medium" | "high" }`. Reject unknown keys.
+Student settings are stored as typed scalar columns (`voice_rate`, `autoplay`, `strictness`) — not JSONB. This gives full database-level type safety, indexability, and eliminates the need for runtime JSON parsing.
 
 Billing-sensitive fields (`plan`, `trialRemainingSeconds`) must never be accepted from client input. These are server-only.
 
@@ -606,13 +606,17 @@ Schema (DDL sketch):
 ```sql
 -- Phase 0 (existing)
 
+create type strictness as enum ('low', 'medium', 'high');
+
 create table students (
   id uuid primary key,
   email text,
   display_name text not null,
   plan text not null default 'free',
   trial_remaining_seconds int not null default 180,
-  settings jsonb not null default '{}'::jsonb,
+  voice_rate double precision,
+  autoplay boolean,
+  strictness strictness,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz

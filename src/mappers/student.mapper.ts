@@ -5,13 +5,6 @@ import type {
   UpdateOneStudentServiceOutput,
   DeleteOneStudentServiceOutput,
 } from "../types/service/student/index.js";
-import { StudentSettingsSchema, type StudentSettings } from "../types/shared/student-settings.js";
-
-/** Parse raw JSONB into typed settings. Falls back to `{}` on invalid data. */
-function parseSettings(raw: unknown): StudentSettings {
-  const result = StudentSettingsSchema.safeParse(raw ?? {});
-  return result.success ? result.data : {};
-}
 
 export class StudentMapper {
   public static readonly getOne = {
@@ -23,7 +16,9 @@ export class StudentMapper {
           displayName: input.displayName,
           plan: input.plan,
           trialRemainingSeconds: input.trialRemainingSeconds,
-          settings: parseSettings(input.settings),
+          voiceRate: input.voiceRate,
+          autoplay: input.autoplay,
+          strictness: input.strictness,
           createdAt: input.createdAt,
           updatedAt: input.updatedAt,
         };
@@ -43,7 +38,9 @@ export class StudentMapper {
           displayName: input.displayName,
           plan: input.plan,
           trialRemainingSeconds: input.trialRemainingSeconds,
-          settings: parseSettings(input.settings),
+          voiceRate: input.voiceRate,
+          autoplay: input.autoplay,
+          strictness: input.strictness,
           createdAt: input.createdAt,
           updatedAt: input.updatedAt,
           created,
@@ -61,7 +58,9 @@ export class StudentMapper {
           displayName: input.displayName,
           plan: input.plan,
           trialRemainingSeconds: input.trialRemainingSeconds,
-          settings: parseSettings(input.settings),
+          voiceRate: input.voiceRate,
+          autoplay: input.autoplay,
+          strictness: input.strictness,
           createdAt: input.createdAt,
           updatedAt: input.updatedAt,
         };
