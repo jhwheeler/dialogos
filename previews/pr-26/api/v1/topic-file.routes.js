@@ -16,8 +16,7 @@ export const topicFileRoutes = async (fastify) => {
             topicId: request.params.topicId,
             studentId: request.studentId,
         });
-        const output = GetManyTopicFileApiOutputSchema.parse({ files: serviceOutput });
-        return reply.send(output);
+        return reply.send({ files: serviceOutput });
     });
     // POST /topics/:topicId/files/presign — get a pre-signed upload URL
     app.post("/topics/:topicId/files/presign", {
@@ -60,8 +59,7 @@ export const topicFileRoutes = async (fastify) => {
             mimeType: request.body.mimeType,
             sizeBytes: request.body.sizeBytes,
         });
-        const output = CreateOneTopicFileApiOutputSchema.parse(serviceOutput);
-        return reply.status(201).send(output);
+        return reply.status(201).send(serviceOutput);
     });
     // DELETE /topics/:topicId/files/:fileId — soft-delete a file
     app.delete("/topics/:topicId/files/:fileId", {

@@ -38,8 +38,7 @@ export const turnRoutes = async (fastify) => {
             studentId: request.studentId,
             studentAudioKey: request.body.studentAudioKey,
         });
-        const output = CreateOneTurnApiOutputSchema.parse(serviceOutput);
-        return reply.status(201).send(output);
+        return reply.status(201).send(serviceOutput);
     });
     // GET /sessions/:sessionId/turns/:turnId — get single turn (for polling)
     app.get("/sessions/:sessionId/turns/:turnId", {
@@ -56,8 +55,7 @@ export const turnRoutes = async (fastify) => {
             sessionId: request.params.sessionId,
             studentId: request.studentId,
         });
-        const output = GetOneTurnApiOutputSchema.parse(serviceOutput);
-        return reply.send(output);
+        return reply.send(serviceOutput);
     });
     // GET /sessions/:sessionId/turns — list all turns for a session
     app.get("/sessions/:sessionId/turns", {
@@ -73,7 +71,6 @@ export const turnRoutes = async (fastify) => {
             sessionId: request.params.sessionId,
             studentId: request.studentId,
         });
-        const output = GetManyTurnApiOutputSchema.parse({ turns: serviceOutput });
-        return reply.send(output);
+        return reply.send({ turns: serviceOutput });
     });
 };

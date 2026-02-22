@@ -16,8 +16,7 @@ export const sourceRoutes = async (fastify) => {
             topicId: request.params.topicId,
             studentId: request.studentId,
         });
-        const output = GetManySourceApiOutputSchema.parse({ sources: serviceOutput });
-        return reply.send(output);
+        return reply.send({ sources: serviceOutput });
     });
     // POST /topics/:topicId/sources — create a new source
     app.post("/topics/:topicId/sources", {
@@ -35,8 +34,7 @@ export const sourceRoutes = async (fastify) => {
             studentId: request.studentId,
             ...request.body,
         });
-        const output = CreateOneSourceApiOutputSchema.parse(serviceOutput);
-        return reply.status(201).send(output);
+        return reply.status(201).send(serviceOutput);
     });
     // GET /topics/:topicId/sources/:sourceId — get one source
     app.get("/topics/:topicId/sources/:sourceId", {
@@ -52,8 +50,7 @@ export const sourceRoutes = async (fastify) => {
             id: request.params.sourceId,
             studentId: request.studentId,
         });
-        const output = GetOneSourceApiOutputSchema.parse(serviceOutput);
-        return reply.send(output);
+        return reply.send(serviceOutput);
     });
     // PATCH /topics/:topicId/sources/:sourceId — update a source
     app.patch("/topics/:topicId/sources/:sourceId", {
@@ -71,8 +68,7 @@ export const sourceRoutes = async (fastify) => {
             studentId: request.studentId,
             ...request.body,
         });
-        const output = UpdateOneSourceApiOutputSchema.parse(serviceOutput);
-        return reply.send(output);
+        return reply.send(serviceOutput);
     });
     // DELETE /topics/:topicId/sources/:sourceId — soft-delete
     app.delete("/topics/:topicId/sources/:sourceId", {

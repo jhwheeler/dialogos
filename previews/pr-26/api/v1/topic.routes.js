@@ -14,8 +14,7 @@ export const topicRoutes = async (fastify) => {
         const serviceOutput = await topicService.getMany({
             studentId: request.studentId,
         });
-        const output = GetManyTopicApiOutputSchema.parse({ topics: serviceOutput });
-        return reply.send(output);
+        return reply.send({ topics: serviceOutput });
     });
     // POST /topics — create a new topic
     app.post("/topics", {
@@ -31,8 +30,7 @@ export const topicRoutes = async (fastify) => {
             studentId: request.studentId,
             ...request.body,
         });
-        const output = CreateOneTopicApiOutputSchema.parse(serviceOutput);
-        return reply.status(201).send(output);
+        return reply.status(201).send(serviceOutput);
     });
     // GET /topics/:topicId — get one topic (ownership check in service)
     app.get("/topics/:topicId", {
@@ -48,8 +46,7 @@ export const topicRoutes = async (fastify) => {
             id: request.params.topicId,
             studentId: request.studentId,
         });
-        const output = GetOneTopicApiOutputSchema.parse(serviceOutput);
-        return reply.send(output);
+        return reply.send(serviceOutput);
     });
     // PATCH /topics/:topicId — update a topic (ownership check in service)
     app.patch("/topics/:topicId", {
@@ -67,8 +64,7 @@ export const topicRoutes = async (fastify) => {
             studentId: request.studentId,
             ...request.body,
         });
-        const output = UpdateOneTopicApiOutputSchema.parse(serviceOutput);
-        return reply.send(output);
+        return reply.send(serviceOutput);
     });
     // DELETE /topics/:topicId — soft-delete (sets deletedAt)
     app.delete("/topics/:topicId", {

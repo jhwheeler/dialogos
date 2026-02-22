@@ -16,8 +16,7 @@ export const sessionRoutes = async (fastify) => {
             topicId: request.params.topicId,
             studentId: request.studentId,
         });
-        const output = GetManySessionApiOutputSchema.parse({ sessions: serviceOutput });
-        return reply.send(output);
+        return reply.send({ sessions: serviceOutput });
     });
     // POST /topics/:topicId/sessions — create a new draft session
     app.post("/topics/:topicId/sessions", {
@@ -35,8 +34,7 @@ export const sessionRoutes = async (fastify) => {
             studentId: request.studentId,
             ...request.body,
         });
-        const output = CreateOneSessionApiOutputSchema.parse(serviceOutput);
-        return reply.status(201).send(output);
+        return reply.status(201).send(serviceOutput);
     });
     // GET /sessions/:sessionId — get single session
     app.get("/sessions/:sessionId", {
@@ -52,8 +50,7 @@ export const sessionRoutes = async (fastify) => {
             id: request.params.sessionId,
             studentId: request.studentId,
         });
-        const output = GetOneSessionApiOutputSchema.parse(serviceOutput);
-        return reply.send(output);
+        return reply.send(serviceOutput);
     });
     // POST /sessions/:sessionId/start — transition DRAFT → ACTIVE
     app.post("/sessions/:sessionId/start", {
@@ -69,8 +66,7 @@ export const sessionRoutes = async (fastify) => {
             id: request.params.sessionId,
             studentId: request.studentId,
         });
-        const output = SessionTransitionApiOutputSchema.parse(serviceOutput);
-        return reply.send(output);
+        return reply.send(serviceOutput);
     });
     // POST /sessions/:sessionId/end — transition ACTIVE → ENDED
     app.post("/sessions/:sessionId/end", {
@@ -86,8 +82,7 @@ export const sessionRoutes = async (fastify) => {
             id: request.params.sessionId,
             studentId: request.studentId,
         });
-        const output = SessionTransitionApiOutputSchema.parse(serviceOutput);
-        return reply.send(output);
+        return reply.send(serviceOutput);
     });
     // POST /sessions/:sessionId/abort — transition ACTIVE → ABORTED
     app.post("/sessions/:sessionId/abort", {
@@ -103,8 +98,7 @@ export const sessionRoutes = async (fastify) => {
             id: request.params.sessionId,
             studentId: request.studentId,
         });
-        const output = SessionTransitionApiOutputSchema.parse(serviceOutput);
-        return reply.send(output);
+        return reply.send(serviceOutput);
     });
     // DELETE /sessions/:sessionId — soft-delete
     app.delete("/sessions/:sessionId", {
