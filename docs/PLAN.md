@@ -55,21 +55,21 @@ Acceptance checks:
 
 ### Phase 1 PR split (backend-focused)
 
-1. **PR-1 — Session lifecycle + Source entity (start now)**
+1. **PR-1 — Session lifecycle + Source entity (done ✓)**
    - Source CRUD with grounding tier derivation (TECH_SPEC Section 4.4) and session-source linking.
    - Session CRUD-lite for draft/start/end/abort/list plus single-session retrieval, with full state-machine transition enforcement.
    - Session creation accepts `triviumStage` (grammar/logic/rhetoric/combined) per TECH_SPEC Section 4.1.
    - Includes mappers, DI container wiring, and soft-delete endpoints.
-2. **PR-2 — Turn intake + audio presign**
-   - Add turn type/data-source/service/route contracts. Add `TurnMapper` following established pattern.
-   - Implement `POST /v1/sessions/:sessionId/turns/presign-audio` and `POST /v1/sessions/:sessionId/turns`.
-   - Enforce session-active guard: turns can only be created when session status is `ACTIVE` (reject with 409 Conflict otherwise).
-   - Auto-assign turn `index` in service layer by counting existing turns for the session (the Prisma unique constraint on `(sessionId, index)` guarantees ordering).
-   - Persist turn rows with pending assistant fields; keep ownership checks strict.
-   - Register `TurnDataSource` and `TurnService` in `src/lib/container.ts`.
-3. **PR-3 — Async pipeline skeleton**
+2. **PR-2 — Turn intake + audio presign (done ✓)**
+   - Added Turn type/data-source/service/route contracts with `TurnMapper` following established pattern.
+   - Implemented `POST /v1/sessions/:sessionId/turns/presign-audio`, `POST /v1/sessions/:sessionId/turns`, `GET /v1/sessions/:sessionId/turns/:turnId`, and `GET /v1/sessions/:sessionId/turns`.
+   - Session-active guard enforced: turns can only be created when session status is `ACTIVE` (409 Conflict otherwise).
+   - Auto-assigned turn `index` in service layer by counting existing turns for the session (Prisma unique constraint on `(sessionId, index)` guarantees ordering).
+   - Persisted turn rows with pending assistant fields; ownership checks flow through parent session.
+   - Registered `TurnDataSource` and `TurnService` in `src/lib/container.ts`.
+3. **PR-3 — Async pipeline skeleton (next)**
    - Add queue abstraction and job contracts for all three spec-defined jobs: `TRANSCRIBE_TURN`, `GENERATE_PROMPT`, and `RENDER_ARTIFACTS` (TECH_SPEC Section 9.2). Wire no-op/mock handlers for each through service orchestration. `RENDER_ARTIFACTS` handler can remain a stub until Phase 2, but the contract must exist.
-   - Add turn status read endpoint (`GET /v1/sessions/:sessionId/turns/:turnId`) for polling.
+   - Turn status read endpoint (`GET /v1/sessions/:sessionId/turns/:turnId`) already exists from PR-2; use it for polling.
 4. **PR-4 — STT integration + prompt generation enforcement loop**
    - Wire real STT provider into the `TRANSCRIBE_TURN` handler (replace no-op from PR-3). Persist `studentText` on the turn.
    - Implement strict structured output validation pipeline from TECH_SPEC Section 4.3 (schema, word cap, banned phrases, one-sentence check, bounded retries) in the `GENERATE_PROMPT` handler.
