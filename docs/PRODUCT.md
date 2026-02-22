@@ -72,6 +72,12 @@ The differentiator is the combination of:
 2. **Socratic questioning** (respectful, sharp, anti-sycophantic)
 3. **Audio-first, low-screen UX**
 4. **Anti-offloading AI constraints** (AI does not generate the content)
+5. **Source-grounded coaching with content anchoring** (AI checks student claims against source material without explaining the text for them)
+6. **Concept Ledger** (a personal knowledge base built from the student's own verbatim speech — never AI-authored)
+7. **Spaced re-oralization** (retrieval practice that resurfaces past claims and definitions for re-articulation from memory)
+8. **Argument fingerprint** (form-based analytics tracking argumentative patterns and growth over time)
+
+Features 5–8 are what separate Dialogos from a GPT wrapper. The core session loop (1–4) is necessary but not sufficient. The system must have **memory, progression, and metrics** to be a practice system rather than a conversation tool.
 
 ---
 
@@ -163,58 +169,79 @@ Product implication:
 
 ---
 
-## Trivium as Product Protocol
+## Trivium Stage Selection (session protocol)
 
 We are not using "trivium" as branding fluff.
-We are using it as a **session protocol**.
+We are using it as a **session protocol** — the student selects a Trivium Stage before each session, which determines the pedagogical focus.
+
+**This is separate from Socrates Mode.** Socrates Mode is the AI's personality (always on). Trivium Stage is the session's focus (student-selected).
+
+Available stages:
 
 ### Grammar stage (what is being said?)
 
-The user must perform acts like:
+The student must perform acts like:
 
-- define key terms
-- identify a central claim
-- quote or paraphrase a key sentence
-- distinguish similar terms
+- Define key term(s) used
+- Paraphrase a key sentence/claim from the source
+- Distinguish close terms (A vs B)
+- Quote or identify a central claim
 
 ### Logic stage (how does it hold together?)
 
-The user must perform acts like:
+The student must perform acts like:
 
-- state premises and conclusion
-- identify assumptions
-- give the strongest objection
-- locate uncertainty (weak premise / unclear inference)
+- State argument as premises + conclusion
+- Identify weakest premise / uncertainty
+- Give strongest objection (steelman, not strawman)
+- Locate assumptions and unclear inferences
 
 ### Rhetoric stage (can you express and defend it?)
 
-The user must perform acts like:
+The student must perform acts like:
 
-- explain it to a specific audience
-- state a position
-- persuade, compare, or defend
-- respond to cross-examination
+- Explain to a chosen audience (e.g. "smart teenager" / "skeptical peer")
+- State their stance / interpretation
+- Give one example + one implication
+- Respond to short cross-examination
+
+### Combined Trivium (recommended default)
+
+A guided 10–15 minute sequence that flows through all three stages:
+
+1. Brief arrival / orientation
+2. Recall / retell from memory
+3. Grammar work
+4. Logic work
+5. Rhetoric work
+6. Short cross-exam
+7. Compression + closure
 
 This protocol is the heart of the product.
 
 ---
 
-## Socrates Mode (non-negotiable behavior/tone requirement)
+## Socrates Mode (AI personality contract — always on)
+
+**Important distinction:** Socrates Mode is the AI's personality and behavioral contract. It is always on. It is NOT the same thing as Trivium Stage selection (Grammar / Logic / Rhetoric / Combined), which is a separate session parameter. Socrates Mode defines *how* the AI behaves; Trivium Stage defines *what* the session focuses on.
 
 ### Desired tone
 
 - respectful
 - precise
 - unsentimental
-- occasionally witty
+- occasionally witty (but not ironic to the point of condescension)
 - not mean
 - not flattering
+- concise but conversational — not "1960s robot dry"
 
 ### Must avoid
 
 - "Great job!" / "You're absolutely right!" style sycophancy
 - fake encouragement
 - content-padding
+- long checklists or multi-paragraph responses
+- unsolicited teaching paragraphs
 
 ### Socrates Mode behavior examples
 
@@ -228,28 +255,77 @@ This protocol is the heart of the product.
 
 This should feel like being challenged by a sharp tutor, not praised by a motivational app.
 
+### Deterministic Socratic rules (rules + LLM, not pure chat)
+
+These are mechanical guardrails the coach MUST enforce, not suggestions. They are what make the system deterministic rather than relying on prompt engineering alone:
+
+| Trigger | Required AI response |
+|---|---|
+| Student uses key term without definition | Interrupt: "Define [term]." |
+| Student makes a claim without example | Demand example before proceeding. |
+| Student answers objection by changing thesis (drift) | Call out drift. Require restatement of original thesis. |
+| Student equivocates on a term | Ask for explicit distinction. |
+| Student never states a conclusion | Require one before proceeding. |
+
+**Design goal:** "Rules + LLM" — the LLM provides conversational flexibility, but the rules provide deterministic enforcement that a generic chat UI cannot.
+
+### Source-anchoring rules
+
+When the AI has access to the source material (via extracted text or knowledge of canonical works), it applies additional content-anchoring rules. These are still Socratic — the AI asks questions, never provides the "correct" reading.
+
+| Trigger | Required AI response |
+|---|---|
+| Student claims "the author argues X" but source doesn't support it | "Where does the author say that? Quote or paraphrase the passage." |
+| Student's paraphrase directly contradicts source text | "[Source quote]. You said [their claim]. Reconcile." |
+| Student presents conclusion as the source's without evidence | "Is that the author's claim or yours? Distinguish." |
+| Student builds argument on a passage they haven't located | "Which passage are you drawing from? Locate it." |
+
+**Anti-offloading constraint:** The AI never says "here's what the text actually means." It holds the student accountable to the text without explaining it for them.
+
+### Source-grounding tiers
+
+The level of content-anchoring depends on what source material is available:
+
+| Tier | Source availability | AI capability |
+|---|---|---|
+| **Tier 1** | Extracted text available (OCR, doc upload) | Strongest grounding. Can quote source verbatim when challenging. Contradictions detectable with high confidence. |
+| **Tier 2** | Known/canonical text, no upload (e.g. "Republic 327a") | AI draws on training knowledge. Can demand evidence, flag likely misreadings, challenge attributions. Slightly less precise (no specific edition/translation). |
+| **Tier 3** | Obscure or no source text (voice summary, niche paper) | Form-only coaching. Can enforce structure, definitions, argument form. Cannot verify content claims against source. |
+
+The system should make the grounding tier visible to the student (e.g., "Source: Republic Book I — Tier 2: canonical text") so they understand the level of content-checking they're getting.
+
 ---
 
-## Core Loop (MVP version)
+## Core Loop
 
-### Session flow (10–15 minutes)
+### Session flow (10–15 minutes, mostly screen-off)
 
-1. **Choose source**
-   - A passage, chapter, concept, lecture, or topic
-2. **Arrive / orient (brief)**
+1. **Select or declare Source**
+   - (A) Take photo of page → OCR extract
+   - (B) Upload document (PDF/txt/image) → extract
+   - (C) Reference known text by title + location (e.g. "Republic 327a–331d")
+   - (D) Voice "source summary" when no text exists
+   - Target: <30 seconds of screen interaction before speaking
+2. **Choose Trivium Stage**
+   - Grammar / Logic / Rhetoric / Combined (recommended default)
+3. **Arrive / orient (brief)**
    - one short prompt to anchor attention (e.g. "What are you working on?")
-3. **Recall by voice** (default)
+4. **Recall by voice** (default)
    - from memory first: retell, define, or paraphrase before checking notes
-4. **Choose mode**
-   - Grammar / Logic / Rhetoric (or a combined sequence)
-5. **Receive Socratic follow-up**
+5. **Trivium work under Socratic questioning**
+   - AI asks one follow-up at a time
+   - Deterministic rules enforced (definitions, drift, equivocation, etc.)
+   - Source-anchoring applied when source text available
 6. **Compression**
-   - restate in one clear sentence (or one analogy, if rhetoric mode)
+   - restate in one clear sentence (or one analogy, if rhetoric stage)
 7. **Closure**
    - name what is still unclear / what needs another pass
-8. **Export transcript + structure** (optional)
+8. **Concept Ledger review** (post-session)
+   - System presents candidate ledger entries from the student's own speech
+   - Student approves/rejects by voice or minimal taps
+9. **Export transcript + structure** (optional)
 
-### Important MVP constraint
+### Important constraint
 
 Feedback should mostly be about:
 
@@ -258,37 +334,54 @@ Feedback should mostly be about:
 - structure
 - coherence
 - precision
+- fidelity to source (when source text is available)
 
-It should **not** default to giving the answer.
+It should **not** default to giving the answer or explaining the source text.
 
-Waldorf influence in MVP should stay at the **session-flow level** (rhythm, recall, paraphrase, closure), not expand into block schedules, grade-level schemas, or a large curriculum system.
+Waldorf influence should stay at the **session-flow level** (rhythm, recall, paraphrase, closure), not expand into block schedules, grade-level schemas, or a large curriculum system.
+
+### Feedback format
+
+Keep feedback as: (1) one concrete critique, (2) one required revision prompt. Prefer one sharp follow-up question rather than long checklists. Use session memory (source + prior answers) for relevant follow-ups.
 
 ---
 
 ## Source Input / Context Ingestion
 
-The app needs easy ways to give the AI context **without requiring phone typing**.
+The app needs easy ways to give the AI context **without requiring phone typing**. Sources are first-class entities, not just file attachments.
 
-### Preferred input methods
+### Source types
 
-1. **Take a picture of a page**
-   - photo of book page / notes / printout
-2. **Upload a document**
-   - PDF, text file, image
-3. **Name a public source verbally**
-   - e.g. "Plato Republic Book 1" or "John 1 in Greek"
-4. **Record a verbal source summary**
-   - if no text is available, user can say what they're working on
+| Type | Input method | Grounding tier | What's stored |
+|---|---|---|---|
+| **Photo/OCR** | Take photo of page | Tier 1 | Image file + extracted text |
+| **Document** | Upload PDF/txt/image | Tier 1 | File + extracted text |
+| **Reference** | Name a known text verbally or by search | Tier 2 (known) or Tier 3 (obscure) | Title + citation location |
+| **Voice summary** | Speak what you're working on | Tier 3 | Audio + transcribed summary |
 
-### Secondary fallback (optional)
+### Source entity
 
-- typing on phone should exist but not be the main path
-- text mode should be possible for quiet/noisy environments
+A Source is a semantic entity, separate from raw file storage. It may or may not be backed by an uploaded file (TopicFile). A Source has:
 
-### Product principle
+- Type (photo_ocr, document, reference, voice_summary)
+- Title (student's label)
+- Citation (e.g. "Republic 327a–331d")
+- Extracted text (when available)
+- Grounding tier (determined by type + text availability)
+- Optional link to TopicFile (for file-backed sources)
 
-The main path should be:
-**audio + image/document**, not phone keyboard.
+Sessions are linked to a Source. The Source provides the grounding context for source-anchoring rules.
+
+### Source library
+
+Sources are stored in a per-topic library. A student can reuse a source across multiple sessions, building depth on the same material over time.
+
+### UX principle
+
+- The main path should be: **audio + image/document**, not phone keyboard.
+- Target: student spends <30 seconds interacting with screen before speaking.
+- Typing on phone should exist but not be the main path.
+- Text mode should be possible for quiet/noisy environments.
 
 ---
 
@@ -316,30 +409,141 @@ This distinction is central to the product identity.
 
 ---
 
-## MVP Feature Set
+## Concept Ledger (personal knowledge base from student's own words)
 
-### Must-have
+The Concept Ledger is a commonplace book built exclusively from the student's own speech. The AI never authors ledger entries — it only extracts candidates from the student's verbatim words.
+
+### How it works
+
+After a session ends, the system parses the transcript and generates candidate ledger entries:
+
+- **Thesis** (quoted from student speech)
+- **Definitions** (quoted from student speech)
+- **Key distinctions** (quoted from student speech)
+- **Objection + response** (quoted from student speech)
+
+The student approves or rejects each candidate by voice or minimal taps:
+
+- Keep / Discard
+- Rename tag / project
+- Link to existing concept
+- Attach to source
+
+### What it becomes
+
+Over time, the Concept Ledger becomes the student's long-term knowledge base — a record of what they've actually said and committed to, not what the AI generated for them. This is the anti-offloading principle applied to note-taking.
+
+### Anti-cheating constraint
+
+The AI must NEVER author, rephrase, or polish ledger entries. If the student said something poorly, the ledger records it poorly. The student can revise entries in future sessions by re-articulating (which creates a new entry linked to the old one).
+
+---
+
+## Spaced Re-oralization (retrieval practice)
+
+Spaced re-oralization is what makes Dialogos a practice *system* rather than a series of disconnected sessions. After a session, the system schedules resurfacing prompts that force the student to re-articulate from memory.
+
+### How it works
+
+- "Re-explain [concept X] in 90 seconds." — scheduled at 3 / 7 / 21 days (configurable)
+- "Last time you defined justice as '[their verbatim quote].' Do you still endorse it?"
+- "You claimed [their thesis]. State the strongest objection to it."
+
+### Constraints
+
+- Force restatement from memory — no notes by default
+- The student speaks; the system records and compares
+- Integration with Concept Ledger: resurface specific ledger entries for re-articulation
+- Mini-sessions (60–90 seconds), not full trivium sessions
+
+### Why this matters
+
+Without spaced re-oralization, the student does one session and forgets. With it, the system tracks what they've committed to and forces them to re-engage. This is the difference between "I practiced once" and "I've been practicing for three weeks and my definitions are getting tighter."
+
+---
+
+## Analytics + Argument Fingerprint (form metrics over time)
+
+### Form-based signals tracked across sessions
+
+These are form metrics, not content judgments:
+
+- Undefined term count (per session)
+- Thesis drift incidents (per session)
+- Premises stated count
+- Conclusion clarity flag
+- Objection quality tier (strawman → steelman)
+- Equivocation flags
+- Timebox compliance (too long / too short)
+- Source-anchoring flags (unsupported claims, contradictions with source)
+
+### What the student sees
+
+Trends and personal patterns:
+
+- "You drift most when discussing [topic X]."
+- "Undefined terms decreased from 6 → 2 per session over 3 weeks."
+- "Your objection quality has moved from strawman to steelman range."
+- "You consistently exceed the timebox in rhetoric stage."
+
+### Product principle
+
+Progress signals should be **descriptive, not evaluative**. "You defined terms in 4 out of 6 turns" is useful. "Great improvement!" is not. The data speaks; the app doesn't editorialize. This is consistent with the anti-sycophancy rule.
+
+---
+
+## Phased Feature Set
+
+### Phase 1: Core Session Loop
 
 - Audio recording and playback
 - Speech-to-text transcription
-- Source ingestion (photo + document + simple source naming)
-- Session templates:
-  - Grammar Drill
-  - Logic Drill
-  - Rhetoric Drill
-  - Combined Trivium Session
-- Socrates Mode follow-up questioning
-- Minimal rubric feedback (form, not content)
+- Source entity (photo/OCR + document upload; reference + voice summary as stretch)
+- Source-grounded sessions (session linked to a source)
+- Trivium stage selection (Grammar / Logic / Rhetoric / Combined)
+- Socrates Mode with deterministic rules + source-anchoring
+- Transcript + summary + rubric artifact generation
+- Per-session metrics storage
+- Session review screen
 - Session transcript export (Markdown / plain text)
 
-### Nice-to-have (not MVP)
+### Phase 2: Concept Ledger
 
-- spaced resurfacing ("Explain this again in 3 days")
-- custom user-created drills
-- friend sparring mode
-- teacher mode / classroom mode
-- advanced rhetorical rubrics
-- embodied / somatonoetic module (deferred)
+- Candidate extraction from session transcripts
+- Approve/reject/tag/link workflow
+- Ledger view per topic
+- Ledger entry CRUD
+
+### Phase 3: Spaced Re-oralization
+
+- Review schedule system (3/7/21 day defaults)
+- Mini re-oralization sessions
+- Integration with Concept Ledger entries
+- In-app notification/prompt system
+
+### Phase 4: Analytics + Argument Fingerprint
+
+- Cross-session trend queries
+- Form-based signal tracking over time
+- Personal pattern detection
+- Trends dashboard
+
+### Phase 5: Billing + Launch Polish
+
+- Trial cap enforcement
+- Paywall + subscription
+- OCR extraction (for photo sources)
+- Reference lookup (for known texts)
+- Account export/delete
+
+### Explicitly deferred
+
+- Teacher / classroom reporting
+- Deep pronunciation scoring
+- Somatonoetics / embodiment module
+- Friend sparring mode
+- Custom user-created drills
+- Language learning extension
 
 ---
 
@@ -521,8 +725,10 @@ Practice without visibility into progress is just repetition. The app should giv
 - Session duration
 - Rubric scores (Clarity, Definitions, Structure, Objection-handling, Drift)
 - Prompt types triggered (distribution of grammar / logic / rhetoric moves)
-- Detected issues (frequency of vague terms, missing premises, equivocation, drift, etc.)
+- Detected issues (frequency of vague terms, missing premises, equivocation, drift, contradiction with source, unsupported claims, etc.)
+- Source-anchoring events (contradictions flagged, evidence demands, misattributions caught)
 - Latency (response time between prompt and student speech — a rough proxy for fluency)
+- Timebox compliance (session duration vs target)
 
 ### What we measure (across sessions, per topic)
 
@@ -530,21 +736,21 @@ Practice without visibility into progress is just repetition. The app should giv
 - Shift in issue distribution (e.g., fewer vague-term flags, more objection-handling)
 - Session frequency and consistency (practice rhythm)
 - Definition clarity trend (are definitions getting tighter?)
+- Objection quality trajectory (strawman → steelman over time)
+- Source fidelity trend (fewer unsupported claims over time)
 
 ### What the student sees
 
-- Per-session: rubric scores with evidence snippets (already in artifacts)
-- Across sessions: simple trend lines or deltas ("Definitions improved over last 5 sessions", "Drift decreased")
+- Per-session (Phase 1): rubric scores with evidence snippets
+- Across sessions (Phase 4): simple trend lines or deltas ("Definitions improved over last 5 sessions", "Drift decreased", "You drift most when discussing X")
+- Argument fingerprint: a personal profile of argumentative patterns and tendencies
 - No leaderboards, no points, no streaks-as-gamification
 - Framing should feel like a coach's logbook, not a fitness app
 
-### Product principle
+### Phasing
 
-Progress signals should be **descriptive, not evaluative**. "You defined terms in 4 out of 6 turns" is useful. "Great improvement!" is not. This is consistent with the anti-sycophancy rule — the data speaks, the app doesn't editorialize.
-
-### MVP scope
-
-For v0.1, store all per-session metrics in structured form. Surface only the per-session rubric in the review screen. Cross-session trend views are a near-term follow-up, not MVP.
+- Phase 1: store all per-session metrics in structured form. Surface per-session rubric in the review screen.
+- Phase 4: cross-session trend views, argument fingerprint visualization, personal pattern detection.
 
 ---
 
@@ -563,26 +769,41 @@ This is a product differentiator, not just a billing concern. Transparent, predi
 
 ---
 
+## UX Guardrails
+
+- **No infinite feed.** Sessions are bounded with clear start/end.
+- **No cartoon gamification.** Progress is shown as descriptive metrics, not points/badges/streaks.
+- **Export to Markdown/text** for external writing workflows.
+- **Sessions feel like a dojo** — calm, low-stimulus, formative.
+
+---
+
 ## Open Questions for Next Iteration
 
 1. **Platform choice for MVP**
    - Telegram bot vs PWA vs native app
    - Telegram is fast to ship, but may limit UX polish
 
-2. **Source ingestion complexity**
-   - How much OCR / text extraction is needed in v1?
-   - Should users be able to just speak the source summary and skip OCR entirely?
-
-3. **Feedback rubric design**
+2. **Feedback rubric design**
    - What are the minimum useful rubric categories?
    - How to make them strict but not annoying?
 
-4. **Session memory / continuity**
-   - Should Socrates Mode remember prior answers in the same source and call out contradictions?
-
-5. **Export flow**
+3. **Export flow**
    - Best handoff to writing workflows (Markdown, Obsidian, email, Notion)
+   - How does Concept Ledger export work? (Markdown? Structured JSON?)
 
-6. **Pricing / monetization**
+4. **Pricing / monetization**
    - Cheap and accessible is the goal
-   - likely free tier + simple paid tier
+   - Likely free tier + simple paid tier
+
+5. **Re-oralization notification UX**
+   - Push notification vs in-app prompt on open?
+   - How to avoid notification fatigue?
+
+6. **Concept Ledger revision flow**
+   - When a student re-articulates a definition in a later session, how does the ledger handle versioning?
+   - Link old → new? Replace? Keep history?
+
+7. **Tier 2 source accuracy**
+   - How to handle cases where the AI's training knowledge of a canonical text is imprecise or edition-dependent?
+   - Should we surface a disclaimer?
