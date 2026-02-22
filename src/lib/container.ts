@@ -8,6 +8,10 @@ import { TopicDataSource } from "../data-sources/topic/topic.data-source.js";
 import { TopicService } from "../services/topic/topic.service.js";
 import { TopicFileDataSource } from "../data-sources/topic-file/topic-file.data-source.js";
 import { TopicFileService } from "../services/topic-file/topic-file.service.js";
+import { SourceDataSource } from "../data-sources/source/source.data-source.js";
+import { SourceService } from "../services/source/source.service.js";
+import { SessionDataSource } from "../data-sources/session/session.data-source.js";
+import { SessionService } from "../services/session/session.service.js";
 
 export interface AppContainer {
   prisma: PrismaClient;
@@ -55,6 +59,18 @@ export function createContainer(prisma: PrismaClient, env: AppEnv): AppContainer
 
   dataSources.topicFile = topicFileDataSource;
   services.topicFile = topicFileService;
+
+  const sourceDataSource = new SourceDataSource(prisma);
+  const sourceService = new SourceService(sourceDataSource, topicDataSource, topicFileDataSource);
+
+  dataSources.source = sourceDataSource;
+  services.source = sourceService;
+
+  const sessionDataSource = new SessionDataSource(prisma);
+  const sessionService = new SessionService(sessionDataSource, topicDataSource, sourceDataSource);
+
+  dataSources.session = sessionDataSource;
+  services.session = sessionService;
 
   return {
     prisma,

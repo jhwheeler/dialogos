@@ -12,6 +12,8 @@ import {
 import { healthRoutes } from "./api/v1/health.routes.js";
 import { topicRoutes } from "./api/v1/topic.routes.js";
 import { topicFileRoutes } from "./api/v1/topic-file.routes.js";
+import { sourceRoutes } from "./api/v1/source.routes.js";
+import { sessionRoutes } from "./api/v1/session.routes.js";
 import authPlugin from "./api/auth.plugin.js";
 import containerPlugin from "./plugins/container.plugin.js";
 import { registerErrorHandler } from "./errors/error-handler.js";
@@ -63,6 +65,8 @@ export function buildApp() {
     await v1.register(healthRoutes, { prefix: "/v1" });
     await v1.register(topicRoutes, { prefix: "/v1" });
     await v1.register(topicFileRoutes, { prefix: "/v1" });
+    await v1.register(sourceRoutes, { prefix: "/v1" });
+    await v1.register(sessionRoutes, { prefix: "/v1" });
   });
 
   return app;
