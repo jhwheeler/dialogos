@@ -11,6 +11,7 @@ This repository is being prepared for AI-assisted development.
 ## Product and architecture context
 - Product direction: `docs/PRODUCT.md`
 - Implementation-ready MVP spec: `docs/TECH_SPEC.md`
+- Phased implementation plan: `docs/PLAN.md`
 - Build/run commands: `docs/BUILD.md`
 - Team workflow conventions: `docs/WORKFLOW.md`
 
