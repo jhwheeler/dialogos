@@ -4,9 +4,9 @@ export const UpdateOneSourceApiParamsSchema = z.object({
     sourceId: z.string().uuid(),
 });
 export const UpdateOneSourceApiBodySchema = z.object({
-    title: z.string().optional(),
-    citation: z.string().optional(),
-    extractedText: z.string().optional(),
+    title: z.string().min(1).max(500).optional(),
+    citation: z.string().max(1000).optional(),
+    extractedText: z.string().max(500_000).optional(),
 });
 export const UpdateOneSourceApiOutputSchema = z.object({
     id: z.string().uuid(),

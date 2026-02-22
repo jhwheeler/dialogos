@@ -1,6 +1,8 @@
 import fp from "fastify-plugin";
 import { jwtVerify } from "jose";
 import { ApiError } from "../errors/api-error.js";
+/** Maximum number of student IDs to cache in memory. */
+const MAX_KNOWN_STUDENTS = 10_000;
 const authPlugin = async (fastify, opts) => {
     const secret = new TextEncoder().encode(opts.supabaseJwtSecret);
     const knownStudents = new Set();
@@ -12,7 +14,11 @@ const authPlugin = async (fastify, opts) => {
         }
         const token = header.slice(7);
         try {
-            const { payload } = await jwtVerify(token, secret);
+            const { payload } = await jwtVerify(token, secret, {
+                algorithms: ["HS256"],
+                audience: "authenticated",
+                ...(opts.supabaseJwtIssuer && { issuer: opts.supabaseJwtIssuer }),
+            });
             const studentId = payload.sub;
             if (!studentId) {
                 throw ApiError.authentication("Token missing sub claim");
@@ -27,6 +33,12 @@ const authPlugin = async (fastify, opts) => {
                         payload.email ??
                         "",
                 });
+                // Evict oldest entry if cache is full to bound memory growth
+                if (knownStudents.size >= MAX_KNOWN_STUDENTS) {
+                    const first = knownStudents.values().next().value;
+                    if (first !== undefined)
+                        knownStudents.delete(first);
+                }
                 knownStudents.add(studentId);
             }
         }

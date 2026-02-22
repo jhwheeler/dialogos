@@ -28,10 +28,14 @@ export class StudentDataSource {
         return this.prisma.student.update({
             where: { id: input.id },
             data: {
-                displayName: input.displayName,
-                settings: input.settings,
-                plan: input.plan,
-                trialRemainingSeconds: input.trialRemainingSeconds,
+                ...(input.displayName !== undefined && { displayName: input.displayName }),
+                ...(input.voiceRate !== undefined && { voiceRate: input.voiceRate }),
+                ...(input.autoplay !== undefined && { autoplay: input.autoplay }),
+                ...(input.strictness !== undefined && { strictness: input.strictness }),
+                ...(input.plan !== undefined && { plan: input.plan }),
+                ...(input.trialRemainingSeconds !== undefined && {
+                    trialRemainingSeconds: input.trialRemainingSeconds,
+                }),
             },
         });
     }

@@ -1,7 +1,7 @@
 import { z } from "zod";
 export const CreateOrFindStudentServiceInputSchema = z.object({
     email: z.string().email(),
-    displayName: z.string(),
+    displayName: z.string().min(1).max(500),
 });
 export const CreateOrFindStudentServiceOutputSchema = z.object({
     id: z.string().uuid(),
@@ -9,7 +9,9 @@ export const CreateOrFindStudentServiceOutputSchema = z.object({
     displayName: z.string(),
     plan: z.enum(["free", "paid"]),
     trialRemainingSeconds: z.number().int(),
-    settings: z.record(z.unknown()),
+    voiceRate: z.number().nullable(),
+    autoplay: z.boolean().nullable(),
+    strictness: z.enum(["low", "medium", "high"]).nullable(),
     createdAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
     created: z.boolean(),

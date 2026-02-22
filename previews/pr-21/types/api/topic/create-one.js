@@ -1,7 +1,7 @@
 import { z } from "zod";
 export const CreateOneTopicApiInputSchema = z.object({
-    title: z.string(),
-    description: z.string().optional(),
+    title: z.string().min(1).max(500),
+    description: z.string().max(5000).optional(),
 });
 export const CreateOneTopicApiOutputSchema = z.object({
     id: z.string().uuid(),

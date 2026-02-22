@@ -9,6 +9,8 @@ import { SourceDataSource } from "../data-sources/source/source.data-source.js";
 import { SourceService } from "../services/source/source.service.js";
 import { SessionDataSource } from "../data-sources/session/session.data-source.js";
 import { SessionService } from "../services/session/session.service.js";
+import { TurnDataSource } from "../data-sources/turn/turn.data-source.js";
+import { TurnService } from "../services/turn/turn.service.js";
 export function createContainer(prisma, env) {
     // DataSources and Services are registered here as the feature slices are built.
     // Each agent adds its data source / service to this file.
@@ -47,6 +49,10 @@ export function createContainer(prisma, env) {
     const sessionService = new SessionService(sessionDataSource, topicDataSource, sourceDataSource);
     dataSources.session = sessionDataSource;
     services.session = sessionService;
+    const turnDataSource = new TurnDataSource(prisma);
+    const turnService = new TurnService(turnDataSource, sessionDataSource, storage);
+    dataSources.turn = turnDataSource;
+    services.turn = turnService;
     return {
         prisma,
         env,
