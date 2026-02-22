@@ -12,6 +12,8 @@ import { SourceDataSource } from "../data-sources/source/source.data-source.js";
 import { SourceService } from "../services/source/source.service.js";
 import { SessionDataSource } from "../data-sources/session/session.data-source.js";
 import { SessionService } from "../services/session/session.service.js";
+import { TurnDataSource } from "../data-sources/turn/turn.data-source.js";
+import { TurnService } from "../services/turn/turn.service.js";
 
 export interface AppContainer {
   prisma: PrismaClient;
@@ -71,6 +73,12 @@ export function createContainer(prisma: PrismaClient, env: AppEnv): AppContainer
 
   dataSources.session = sessionDataSource;
   services.session = sessionService;
+
+  const turnDataSource = new TurnDataSource(prisma);
+  const turnService = new TurnService(turnDataSource, sessionDataSource, storage);
+
+  dataSources.turn = turnDataSource;
+  services.turn = turnService;
 
   return {
     prisma,
