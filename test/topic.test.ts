@@ -365,6 +365,165 @@ describe("Topic CRUD routes", () => {
     });
   });
 
+  // ─── Additional edge cases ─────────────────────────────────────
+
+  describe("Edge cases", () => {
+    it("returns 404 when GET targets a soft-deleted topic", async () => {
+      const createResponse = await app.inject({
+        method: "POST",
+        url: "/v1/topics",
+        headers: authHeader(tokenA),
+        payload: { title: "Will Delete" },
+      });
+      const created = createResponse.json();
+
+      await app.inject({
+        method: "DELETE",
+        url: `/v1/topics/${created.id}`,
+        headers: authHeader(tokenA),
+      });
+
+      const response = await app.inject({
+        method: "GET",
+        url: `/v1/topics/${created.id}`,
+        headers: authHeader(tokenA),
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it("returns 404 when PATCH targets a soft-deleted topic", async () => {
+      const createResponse = await app.inject({
+        method: "POST",
+        url: "/v1/topics",
+        headers: authHeader(tokenA),
+        payload: { title: "Will Delete" },
+      });
+      const created = createResponse.json();
+
+      await app.inject({
+        method: "DELETE",
+        url: `/v1/topics/${created.id}`,
+        headers: authHeader(tokenA),
+      });
+
+      const response = await app.inject({
+        method: "PATCH",
+        url: `/v1/topics/${created.id}`,
+        headers: authHeader(tokenA),
+        payload: { title: "Update Deleted" },
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it("returns 404 when DELETE targets an already-deleted topic", async () => {
+      const createResponse = await app.inject({
+        method: "POST",
+        url: "/v1/topics",
+        headers: authHeader(tokenA),
+        payload: { title: "Will Delete Twice" },
+      });
+      const created = createResponse.json();
+
+      const firstDelete = await app.inject({
+        method: "DELETE",
+        url: `/v1/topics/${created.id}`,
+        headers: authHeader(tokenA),
+      });
+      expect(firstDelete.statusCode).toBe(200);
+
+      const secondDelete = await app.inject({
+        method: "DELETE",
+        url: `/v1/topics/${created.id}`,
+        headers: authHeader(tokenA),
+      });
+      expect(secondDelete.statusCode).toBe(404);
+    });
+
+    it("returns multiple topics in descending createdAt order", async () => {
+      await app.inject({
+        method: "POST",
+        url: "/v1/topics",
+        headers: authHeader(tokenA),
+        payload: { title: "First Created" },
+      });
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      await app.inject({
+        method: "POST",
+        url: "/v1/topics",
+        headers: authHeader(tokenA),
+        payload: { title: "Second Created" },
+      });
+
+      const response = await app.inject({
+        method: "GET",
+        url: "/v1/topics",
+        headers: authHeader(tokenA),
+      });
+
+      const body = response.json();
+      expect(body.topics).toHaveLength(2);
+      expect(body.topics[0].title).toBe("Second Created");
+      expect(body.topics[1].title).toBe("First Created");
+    });
+
+    it("PATCH updates the updatedAt timestamp", async () => {
+      const createResponse = await app.inject({
+        method: "POST",
+        url: "/v1/topics",
+        headers: authHeader(tokenA),
+        payload: { title: "Before Update" },
+      });
+      const created = createResponse.json();
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      const patchResponse = await app.inject({
+        method: "PATCH",
+        url: `/v1/topics/${created.id}`,
+        headers: authHeader(tokenA),
+        payload: { title: "After Update" },
+      });
+
+      const patched = patchResponse.json();
+      expect(new Date(patched.updatedAt).getTime()).toBeGreaterThan(
+        new Date(created.updatedAt).getTime(),
+      );
+    });
+
+    it("GET /v1/topics/:topicId response includes correct fields", async () => {
+      const createResponse = await app.inject({
+        method: "POST",
+        url: "/v1/topics",
+        headers: authHeader(tokenA),
+        payload: { title: "Full Shape", description: "Test desc" },
+      });
+      const created = createResponse.json();
+
+      const response = await app.inject({
+        method: "GET",
+        url: `/v1/topics/${created.id}`,
+        headers: authHeader(tokenA),
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body).toEqual({
+        id: expect.any(String),
+        title: "Full Shape",
+        description: "Test desc",
+        createdAt: expect.any(String),
+        updatedAt: expect.any(String),
+      });
+      // Should NOT leak internal fields
+      expect(body).not.toHaveProperty("studentId");
+      expect(body).not.toHaveProperty("deletedAt");
+    });
+  });
+
   // ─── Unauthenticated access ────────────────────────────────────
 
   describe("Unauthenticated access", () => {
