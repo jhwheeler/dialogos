@@ -116,6 +116,7 @@ describe("Authentication edge cases", () => {
     // JWT without `sub` claim
     const token = await new SignJWT({ email: "test@example.com" })
       .setProtectedHeader({ alg: "HS256" })
+      .setAudience("authenticated")
       .setExpirationTime("1h")
       .sign(secret);
 
