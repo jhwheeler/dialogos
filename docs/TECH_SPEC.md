@@ -737,10 +737,64 @@ Pick one and stay consistent:
 
 ### Phase 1: session loop
 
-- Session start/end
-- Turn creation + audio upload
-- STT job + prompt generation job
-- Basic UI session screen
+Phase 0 is complete (foundations are in place). Phase 1 should now be split into small backend-first PRs, each shipping one vertical slice.
+
+#### Phase 1 immediate next step (PR-1)
+
+**Implement session lifecycle API (draft → active → ended/aborted) with strict backend layering.**
+
+Scope:
+
+- Add `Session` types in all three layers (`src/types/api/session`, `src/types/service/session`, `src/types/data-source/session`) using per-operation kebab-case files and namespace barrels.
+- Add `SessionDataSource` (Prisma-only methods, `input` parameter naming, no business logic).
+- Add `SessionMapper` following the established static-class pattern in `src/mappers/` (e.g., `SessionMapper.getOne.output.fromDataSourceToService()`).
+- Add `SessionService` methods for:
+  - create draft session
+  - get single session (for use in later PRs and polling)
+  - start session (enforce valid transition `DRAFT -> ACTIVE`)
+  - end session (enforce valid transition `ACTIVE -> ENDED`)
+  - abort session (enforce valid transition `ACTIVE -> ABORTED`, per Section 5 — "ended early: network/user/payment")
+  - list sessions for topic (non-deleted only)
+- Add `/v1` routes for:
+  - `GET /v1/topics/:topicId/sessions`
+  - `POST /v1/topics/:topicId/sessions`
+  - `GET /v1/sessions/:sessionId`
+  - `POST /v1/sessions/:sessionId/start`
+  - `POST /v1/sessions/:sessionId/end`
+  - `POST /v1/sessions/:sessionId/abort`
+  - `DELETE /v1/sessions/:sessionId` (soft delete)
+- Declare Zod schemas in route config via `fastify-type-provider-zod`, consistent with existing topic routes (do NOT use manual `safeParse` — Phase 0 migrated away from that pattern).
+- Register `SessionDataSource` and `SessionService` in `src/lib/container.ts` so they are accessible via `fastify.container.services.session`.
+- Keep authorization behavior consistent with topic routes (student can only access their own topic/session records).
+
+Acceptance checks:
+
+- Unit tests for service state transitions (DRAFT→ACTIVE, ACTIVE→ENDED, ACTIVE→ABORTED) and invalid transitions (e.g., DRAFT→ENDED, ENDED→ACTIVE).
+- Route tests for auth boundaries, 404 ownership behavior, and happy-path transitions.
+- No queue/STT/model calls yet in PR-1 (defer to PR-3/PR-4 below).
+
+#### Phase 1 PR split (backend-focused)
+
+1. **PR-1 — Session lifecycle (start now)**
+   - Session CRUD-lite for draft/start/end/abort/list plus single-session retrieval, with full state-machine transition enforcement.
+   - Includes mapper, DI container wiring, and soft-delete endpoint.
+2. **PR-2 — Turn intake + audio presign**
+   - Add turn type/data-source/service/route contracts. Add `TurnMapper` following established pattern.
+   - Implement `POST /v1/sessions/:sessionId/turns/presign-audio` and `POST /v1/sessions/:sessionId/turns`.
+   - Enforce session-active guard: turns can only be created when session status is `ACTIVE` (reject with 409 Conflict otherwise).
+   - Auto-assign turn `index` in service layer by counting existing turns for the session (the Prisma unique constraint on `(sessionId, index)` guarantees ordering).
+   - Persist turn rows with pending assistant fields; keep ownership checks strict.
+   - Register `TurnDataSource` and `TurnService` in `src/lib/container.ts`.
+3. **PR-3 — Async pipeline skeleton**
+   - Add queue abstraction and job contracts for all three spec-defined jobs: `TRANSCRIBE_TURN`, `GENERATE_PROMPT`, and `RENDER_ARTIFACTS` (Section 9.2). Wire no-op/mock handlers for each through service orchestration. `RENDER_ARTIFACTS` handler can remain a stub until Phase 2, but the contract must exist.
+   - Add turn status read endpoint (`GET /v1/sessions/:sessionId/turns/:turnId`) for polling.
+4. **PR-4 — STT integration + prompt generation enforcement loop**
+   - Wire real STT provider into the `TRANSCRIBE_TURN` handler (replace no-op from PR-3). Persist `studentText` on the turn.
+   - Implement strict structured output validation pipeline from Section 4.3 (schema, word cap, banned phrases, one-sentence check, bounded retries) in the `GENERATE_PROMPT` handler.
+   - Persist `assistantText`, `assistantPromptType`, `assistantDetectedIssue`, `latencyMs`.
+5. **PR-5 — Basic mobile session screen integration (client)**
+   - Wire session start/record/upload/poll/end to backend endpoints with minimal UI controls.
+   - Keep UI scope limited to proving the loop works end-to-end (real voice → STT → prompt → display).
 
 ### Phase 2: artifacts + review
 
