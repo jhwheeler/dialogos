@@ -1,23 +1,27 @@
 # Dialogos v0.1 — Implementation-Ready Spec
 
-**Status:** Draft v0.1 (implementation scope locked to MVP)
+**Status:** Draft v0.2 (scope updated to include differentiation features; phased delivery)
 **Primary platform:** Mobile (Flutter)
 **Backend:** TypeScript (Fastify) + Prisma + Postgres (Supabase) + Object Storage (Supabase Storage or S3)
-**Core interaction style:** Socrates Mode always-on (no alternate modes in MVP)
+**Core interaction style:** Socrates Mode always-on (AI personality); Trivium Stage selectable per session
 
 ---
 
 ## 0) Product definition
 
-**Dialogos is a voice-first training app for oral mastery of what a student studies.**
-A student speaks. The system responds with short Socratic prompts that force definitions, distinctions, argument structure, and rhetorical clarity **without supplying the missing substance**.
+**Dialogos is a voice-first practice system that trains oral mastery through structured Socratic coaching, source-grounded sessions, and long-term knowledge tracking — without ever doing the thinking for the student.**
 
-### 0.1 Non-negotiables (MVP)
+It is not a chat wrapper. It is a practice system with memory, progression, and metrics.
 
-- **Socrates Mode is the default** and only mode.
+### 0.1 Non-negotiables
+
+- **Socrates Mode is the AI personality** — always on. Witty, direct, polite, insightful, no sycophancy. Separate from Trivium Stage selection.
+- **Trivium Stage is selectable** per session: Grammar, Logic, Rhetoric, or Combined (default).
 - **One move per turn:** exactly one question or instruction per assistant turn.
 - **No praise / no padding / no recap unless asked.**
 - **Audio-first UX:** minimal screen attention; screen exists for control + review.
+- **Source-grounded:** sessions attach to a Source; AI anchors student claims against source material when available.
+- **Anti-offloading:** AI never synthesizes, summarizes sources, or writes the student's argument.
 - **Student terminology:** call them *student*, not *user*.
 
 ### 0.2 Success criteria
@@ -29,28 +33,60 @@ A student speaks. The system responds with short Socratic prompts that force def
 
 ---
 
-## 1) MVP scope
+## 1) Scope (phased delivery)
 
-### 1.1 In scope
+### 1.1 Phase 1: Core Session Loop
 
-- Authentication: Apple + Google (LinkedIn optional later)
+- Authentication: Apple + Google
 - CRUD for Topics, Sessions
-- File uploads attached to Topics (optional in-session upload later)
+- Source entity (photo/OCR, document upload, reference, voice summary)
+- File uploads attached to Topics via TopicFile
+- Source-to-session linking
+- Trivium stage selection per session
 - Voice session loop: record → transcribe → generate next prompt → speak prompt
+- Deterministic Socratic rules + source-anchoring enforcement
 - Transcript in screenplay format
 - End-of-session summary with Grammar/Logic/Rhetoric sections
 - Rubric scoring
-- Paywall after free trial allowance
+- Per-session metrics storage
+
+### 1.2 Phase 2: Concept Ledger
+
+- Candidate extraction from session transcripts (student's verbatim speech only)
+- Approve/reject/tag/link workflow (voice or minimal taps)
+- LedgerEntry CRUD
+- Ledger view per topic
+- Link entries to sources and topics
+
+### 1.3 Phase 3: Spaced Re-oralization
+
+- ReviewScheduleItem entity + scheduling logic (3/7/21 day defaults)
+- Mini re-oralization sessions (60–90 seconds)
+- Resurface past definitions/theses from Concept Ledger
+- In-app notification/prompt system
+
+### 1.4 Phase 4: Analytics + Argument Fingerprint
+
+- Cross-session trend queries
+- Form-based signal tracking over time
+- Personal pattern detection
+- Trends dashboard
+
+### 1.5 Phase 5: Billing + Launch Polish
+
+- Trial cap enforcement + paywall + subscription
+- OCR extraction (for photo sources)
+- Reference lookup (for known texts)
 - Delete/export all personal data
 
-### 1.2 Out of scope (v0.1)
+### 1.6 Explicitly out of scope
 
-- OCR extraction / quoting from PDFs
-- Spaced repetition
+- Teacher/classroom reporting
+- Deep pronunciation scoring
+- Somatonoetics/embodiment module
 - Multi-agent analysis
 - "Friendly tutor" mode
 - Social/community features
-- Advanced analytics dashboards
 
 ---
 
@@ -81,7 +117,7 @@ Long-lived study project.
 
 ### 2.3 TopicFile
 
-Uploaded file reference (PDF/image/text).
+Uploaded file reference (PDF/image/text). Raw storage layer — no semantic content.
 
 - `id` (UUID)
 - `topicId` (FK)
@@ -92,20 +128,36 @@ Uploaded file reference (PDF/image/text).
 - `sizeBytes`
 - `createdAt`, `deletedAt`
 
-### 2.4 Session
+### 2.4 Source
 
-Discrete practice run inside a topic.
+Semantic content entity representing what the student is studying. May or may not be backed by a TopicFile. A session links to a Source for context grounding.
+
+- `id` (UUID)
+- `topicId` (FK)
+- `topicFileId` (FK, nullable — null for reference/voice-summary types)
+- `sourceType` (photo_ocr | document | reference | voice_summary)
+- `title` (student's label for this source)
+- `citation` (nullable — e.g. "Republic 327a–331d")
+- `extractedText` (nullable — populated by OCR, doc extraction, or STT)
+- `groundingTier` (1 | 2 | 3 — derived from sourceType + text availability)
+- `createdAt`, `deletedAt`
+
+### 2.5 Session
+
+Discrete practice run inside a topic, linked to a source.
 
 - `id` (UUID)
 - `topicId` (FK)
 - `studentId` (FK redundant but convenient for queries)
+- `sourceId` (FK, nullable — sessions should have a source but may not always)
+- `triviumStage` (grammar | logic | rhetoric | combined)
 - `status` (draft | active | ended | aborted)
 - `startedAt`, `endedAt`
 - `costCentsEstimate` (int)
 - `trialSecondsUsed` (int)
 - `deletedAt`
 
-### 2.5 Turn
+### 2.6 Turn
 
 A single exchange: student utterance → system prompt.
 
@@ -119,7 +171,7 @@ A single exchange: student utterance → system prompt.
 - `assistantDetectedIssue` (enum/string)
 - `createdAt`, `latencyMs`
 
-### 2.6 Artifacts
+### 2.7 Artifacts
 
 Generated at end of session (and optionally mid-session).
 
@@ -129,6 +181,37 @@ Generated at end of session (and optionally mid-session).
   - `kind` (transcript | summary | rubric | export_md)
   - `content` (TEXT or JSON)
   - `createdAt`
+
+### 2.8 LedgerEntry (Phase 2)
+
+A knowledge entry built from the student's own verbatim speech. Never AI-authored.
+
+- `id` (UUID)
+- `studentId` (FK)
+- `topicId` (FK)
+- `sourceId` (FK, nullable)
+- `sessionId` (FK — which session produced this entry)
+- `entryType` (thesis | definition | distinction | objection_response)
+- `verbatimText` (TEXT — exact quote from student speech)
+- `tags` (TEXT[] or JSON array)
+- `linkedEntryIds` (UUID[] — links to related ledger entries)
+- `status` (candidate | approved | discarded)
+- `createdAt`, `updatedAt`, `deletedAt`
+
+### 2.9 ReviewScheduleItem (Phase 3)
+
+Spaced re-oralization schedule entry.
+
+- `id` (UUID)
+- `studentId` (FK)
+- `sessionId` (FK, nullable — the originating session)
+- `ledgerEntryId` (FK, nullable — the specific entry to resurface)
+- `promptType` (re_explain | restate_definition | challenge_thesis | strongest_objection)
+- `promptText` (TEXT — the specific prompt to present, e.g. "Re-explain justice in 90 seconds")
+- `dueAt` (TIMESTAMPTZ)
+- `completedAt` (TIMESTAMPTZ, nullable)
+- `status` (pending | completed | skipped | expired)
+- `createdAt`
 
 ---
 
@@ -168,9 +251,13 @@ Generated at end of session (and optionally mid-session).
 
 ---
 
-## 4) Socrates Mode: behavioral contract
+## 4) Socrates Mode: behavioral contract (AI personality — always on)
+
+**Important:** Socrates Mode is the AI's personality and enforcement contract, not a session type. It is always active regardless of which Trivium Stage the student selects. Trivium Stage (Grammar/Logic/Rhetoric/Combined) determines the pedagogical focus; Socrates Mode determines how the AI behaves.
 
 These are not aspirational instructions to the model. They are **mechanical guarantees** enforced by server-side validation. The model is one component; the enforcement layer is what turns tone guidance into a reliable contract.
+
+Design goal: **"rules + LLM"** — the LLM provides conversational flexibility, but the rules provide deterministic enforcement that a generic chat UI cannot.
 
 ### 4.1 Output schema (strict)
 
@@ -179,13 +266,21 @@ All model outputs used for prompting MUST validate against this JSON schema:
 ```json
 {
   "next_prompt": "string (<= 12 words default)",
-  "prompt_type": "define | distinguish | premise | inference | objection | compress | clarify | example | scope | contradiction",
-  "detected_issue": "vague_term | missing_premise | equivocation | drift | contradiction | unclear_referent | unsupported_claim | none",
-  "stop_reason": "needs_definition | needs_example | needs_premise | needs_scope | ok_continue"
+  "prompt_type": "define | distinguish | premise | inference | objection | compress | clarify | example | scope | contradiction | locate_passage | reconcile | redirect_to_student | scaffold",
+  "detected_issue": "vague_term | missing_premise | equivocation | drift | contradiction | unclear_referent | unsupported_claim | unsupported_by_source | contradicts_source | misattribution | content_request | none",
+  "stop_reason": "needs_definition | needs_example | needs_premise | needs_scope | needs_source_evidence | ok_continue"
 }
 ```
 
 Only `next_prompt` is spoken to the student. All other fields are stored for instrumentation and artifact generation but never surfaced during the session.
+
+New prompt types for source-anchoring: `locate_passage` (demand textual evidence), `reconcile` (flag contradiction with source).
+
+New prompt types for content question handling: `redirect_to_student` (Socratic turn-back when student asks for content), `scaffold` (partial scaffold when student is stuck — quote a passage, narrow the question, highlight a structural clue).
+
+New detected issues for source-anchoring: `unsupported_by_source`, `contradicts_source`, `misattribution`.
+
+New detected issue for content question handling: `content_request` (student asked for summary, explanation, or meaning of source material).
 
 ### 4.2 Style constraints
 
@@ -196,9 +291,65 @@ Hard rules (enforced by server-side validation + regeneration):
 - No recap unless the student explicitly requests a recap (detect via intent or explicit phrase).
 - No unsolicited teaching paragraphs.
 - Default `next_prompt` word count ≤ 12 (configurable to 16 max; keep it tight).
-- No rhetorical flourishes; neutral, direct.
+- Concise but conversational — not "1960s robot dry."
+- Prefer one sharp follow-up question over long checklists.
 
-### 4.3 Enforcement loop
+### 4.3 Deterministic Socratic rules
+
+These are mechanical guardrails enforced as rules, not suggestions to the model:
+
+| Trigger | Required response |
+|---|---|
+| Student uses key term without definition | Interrupt: "Define [term]." |
+| Student makes a claim without example | Demand example before proceeding. |
+| Student answers objection by changing thesis (drift) | Call out drift. Require restatement of original thesis. |
+| Student equivocates on a term | Ask for explicit distinction. |
+| Student never states a conclusion | Require one before proceeding. |
+
+### 4.4 Source-anchoring rules
+
+When the session's Source has extracted text (Tier 1) or is a known canonical work (Tier 2), the AI applies additional content-anchoring rules. These are still Socratic — the AI asks questions, never provides the "correct" reading.
+
+| Trigger | Required response |
+|---|---|
+| Student claims "the author argues X" but source doesn't support it | "Where does the author say that? Quote or paraphrase the passage." |
+| Student's paraphrase directly contradicts source text | "[Source quote]. You said [their claim]. Reconcile." |
+| Student presents conclusion as the source's without evidence | "Is that the author's claim or yours? Distinguish." |
+| Student builds argument on a passage they haven't located | "Which passage are you drawing from? Locate it." |
+
+**Anti-offloading constraint:** The AI never says "here's what the text actually means." It holds the student accountable to the text without explaining it for them.
+
+**Source-grounding tiers:**
+
+| Tier | Source availability | AI capability |
+|---|---|---|
+| **Tier 1** | Extracted text available (OCR, doc upload) | Strongest grounding. Can quote source verbatim. |
+| **Tier 2** | Known/canonical text, no upload | Draws on training knowledge. Can demand evidence, flag likely misreadings. |
+| **Tier 3** | Obscure or no source text | Form-only coaching. Cannot verify content claims. |
+
+### 4.5 Content question handling (redirect → scaffold)
+
+When a student asks a direct question about the source material ("What does the author mean by X?" or "Can you summarize this passage?"), the AI does not simply refuse or comply. It follows a two-tier redirect-then-scaffold protocol.
+
+**Phase 1 behavior (current):**
+
+| Tier | Trigger | AI response |
+|---|---|---|
+| **Redirect** (first ask) | Student asks for summary, explanation, or meaning of source content | Socratic redirect. "What do *you* think the author means? Paraphrase it." / "State it in your own words first." |
+| **Scaffold** (repeated ask or "I don't know") | Student asks again, or explicitly says they're stuck | Partial scaffold — never the answer. Narrow the question, quote a relevant passage, or highlight a structural clue. E.g., "The author uses 'justice' three times in this paragraph. What do you notice about how the usage shifts?" |
+
+The AI never provides the full answer at either tier. The scaffold gives the student something to push against, not something to copy.
+
+**Design rationale:** A real Socrates offered content — but always through questions. Rigidly refusing a stuck student is paternalistic; immediately answering undermines the product. The redirect-then-scaffold pattern matches how effective human tutors actually behave.
+
+**Future evolution (Phase 2+):** Add a third tier — if the student explicitly asks a third time, comply but quarantine. The AI provides a reading of the passage, then immediately demands the student's own articulation ("Here's one reading. Now — do you agree? State your own position."). Any AI-provided content is:
+- Flagged in the session transcript as `ai_provided_content`
+- Excluded from Concept Ledger candidate extraction
+- Tracked in session metrics (`content_requests_count` vs `student_generated_count`)
+
+This preserves the anti-offloading principle while respecting student autonomy and providing an honest record of what happened.
+
+### 4.6 Enforcement loop
 
 Every model response goes through a validation pipeline before reaching the student:
 
@@ -210,14 +361,18 @@ Every model response goes through a validation pipeline before reaching the stud
 
 This pipeline is the difference between "we asked the model to behave" and "the system guarantees it." A general chat UI cannot enforce this; the enforcement layer is a core product requirement.
 
-### 4.4 Prompting strategy
+### 4.7 Prompting strategy
 
 - Run model in **structured output mode**.
 - Keep conversation context minimal:
   - include last N turns (N=6 by default)
   - include session goal (topic title + optional description)
-  - include current drill target ("grammar/logic/rhetoric") **only if surfaced in artifact**, otherwise keep implicit.
-- Use a "Socrates system message" that describes allowed moves + bans.
+  - include source extracted text (or citation for Tier 2) when available
+  - include current trivium stage (grammar/logic/rhetoric/combined)
+- Use a "Socrates system message" that describes:
+  - allowed moves + bans
+  - deterministic rules (Section 4.3)
+  - source-anchoring rules (Section 4.4) with grounding tier
 - Low temperature, small token cap.
 
 ---
@@ -294,25 +449,38 @@ stateDiagram-v2
   /api
     /v1
       topics.routes.ts
+      sources.routes.ts          # Phase 1
       sessions.routes.ts
       files.routes.ts
-      billing.routes.ts
-      account.routes.ts
+      ledger.routes.ts           # Phase 2
+      reviews.routes.ts          # Phase 3
+      analytics.routes.ts        # Phase 4
+      billing.routes.ts          # Phase 5
+      account.routes.ts          # Phase 5
     auth.plugin.ts
     validation.ts
   /services
     TopicService.ts
+    TopicFileService.ts
+    SourceService.ts             # Phase 1
     SessionService.ts
+    TurnService.ts
     ArtifactService.ts
-    BillingService.ts
-    FileService.ts
+    LedgerService.ts             # Phase 2
+    ReviewScheduleService.ts     # Phase 3
+    AnalyticsService.ts          # Phase 4
+    BillingService.ts            # Phase 5
   /dataSources
     StudentDataSource.ts
     TopicDataSource.ts
     TopicFileDataSource.ts
+    SourceDataSource.ts          # Phase 1
     SessionDataSource.ts
     TurnDataSource.ts
     SessionArtifactDataSource.ts
+    SessionMetricsDataSource.ts
+    LedgerEntryDataSource.ts     # Phase 2
+    ReviewScheduleDataSource.ts  # Phase 3
   /types
     api.ts
     dto.ts
@@ -325,6 +493,8 @@ stateDiagram-v2
       transcribeTurn.ts
       generatePrompt.ts
       renderArtifacts.ts
+      extractLedgerCandidates.ts  # Phase 2
+      scheduleReviews.ts          # Phase 3
   /lib
     logger.ts
     errors.ts
@@ -342,9 +512,11 @@ stateDiagram-v2
 
 ### 7.1 Tables
 
-Minimal schema (DDL sketch):
+Schema (DDL sketch):
 
 ```sql
+-- Phase 0 (existing)
+
 create table students (
   id uuid primary key,
   email text,
@@ -379,10 +551,27 @@ create table topic_files (
   deleted_at timestamptz
 );
 
+-- Phase 1 (new: sources, updated sessions)
+
+create table sources (
+  id uuid primary key,
+  topic_id uuid not null references topics(id),
+  topic_file_id uuid references topic_files(id),
+  source_type text not null, -- photo_ocr | document | reference | voice_summary
+  title text not null,
+  citation text, -- e.g. "Republic 327a-331d"
+  extracted_text text,
+  grounding_tier int not null default 3, -- 1 | 2 | 3
+  created_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
 create table sessions (
   id uuid primary key,
   student_id uuid not null references students(id),
   topic_id uuid not null references topics(id),
+  source_id uuid references sources(id),
+  trivium_stage text not null default 'combined', -- grammar | logic | rhetoric | combined
   status text not null,
   started_at timestamptz,
   ended_at timestamptz,
@@ -414,6 +603,42 @@ create table session_artifacts (
   content text not null,
   created_at timestamptz not null default now()
 );
+
+-- Phase 2 (Concept Ledger)
+
+create table ledger_entries (
+  id uuid primary key,
+  student_id uuid not null references students(id),
+  topic_id uuid not null references topics(id),
+  source_id uuid references sources(id),
+  session_id uuid not null references sessions(id),
+  entry_type text not null, -- thesis | definition | distinction | objection_response
+  verbatim_text text not null,
+  tags text[] not null default '{}',
+  linked_entry_ids uuid[] not null default '{}',
+  status text not null default 'candidate', -- candidate | approved | discarded
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+-- Phase 3 (Spaced Re-oralization)
+
+create table review_schedule_items (
+  id uuid primary key,
+  student_id uuid not null references students(id),
+  session_id uuid references sessions(id),
+  ledger_entry_id uuid references ledger_entries(id),
+  prompt_type text not null, -- re_explain | restate_definition | challenge_thesis | strongest_objection
+  prompt_text text not null,
+  due_at timestamptz not null,
+  completed_at timestamptz,
+  status text not null default 'pending', -- pending | completed | skipped | expired
+  created_at timestamptz not null default now()
+);
+
+create index review_schedule_student_due on review_schedule_items(student_id, due_at)
+  where status = 'pending';
 ```
 
 ### 7.2 Notes
@@ -459,16 +684,29 @@ All endpoints under `/v1`.
   - body: `{ storageKey, kind, originalName, mimeType, sizeBytes }` (finalize metadata)
 - `DELETE /v1/topics/:topicId/files/:fileId`
 
+#### Sources (Phase 1)
+
+- `GET /v1/topics/:topicId/sources`
+  - returns: list of sources for topic
+- `POST /v1/topics/:topicId/sources`
+  - body: `{ sourceType, title, citation?, topicFileId?, extractedText? }`
+  - server determines `groundingTier` based on type + text availability
+- `GET /v1/topics/:topicId/sources/:sourceId`
+- `PATCH /v1/topics/:topicId/sources/:sourceId`
+  - body: `{ title?, citation?, extractedText? }`
+- `DELETE /v1/topics/:topicId/sources/:sourceId`
+  - soft-delete
+
 #### Sessions
 
 - `GET /v1/topics/:topicId/sessions`
 - `POST /v1/topics/:topicId/sessions`
-  - body: `{ }`
-  - creates `DRAFT`
+  - body: `{ sourceId?, triviumStage? }`
+  - creates `DRAFT`; defaults to `combined` stage
 - `POST /v1/sessions/:sessionId/start`
   - transitions to `ACTIVE`
 - `POST /v1/sessions/:sessionId/end`
-  - transitions to `ENDED`, enqueues artifact job
+  - transitions to `ENDED`, enqueues artifact job + ledger candidate extraction (Phase 2)
 - `DELETE /v1/sessions/:sessionId`
   - soft delete
 
@@ -490,13 +728,34 @@ All endpoints under `/v1`.
 - `GET /v1/sessions/:sessionId/artifacts`
 - `GET /v1/sessions/:sessionId/artifacts/:artifactId`
 
-#### Billing / trial
+#### Concept Ledger (Phase 2)
+
+- `GET /v1/topics/:topicId/ledger`
+  - returns: list of approved ledger entries for topic
+- `GET /v1/sessions/:sessionId/ledger-candidates`
+  - returns: candidate entries extracted from session (status=candidate)
+- `PATCH /v1/ledger/:entryId`
+  - body: `{ status?, tags?, linkedEntryIds? }`
+  - approve/discard/tag/link entries
+- `DELETE /v1/ledger/:entryId`
+  - soft-delete
+
+#### Review Schedule (Phase 3)
+
+- `GET /v1/reviews/upcoming`
+  - returns: pending review items for authenticated student, ordered by due date
+- `POST /v1/reviews/:reviewId/complete`
+  - body: `{ }` — marks as completed
+- `POST /v1/reviews/:reviewId/skip`
+  - body: `{ }` — marks as skipped
+
+#### Billing / trial (Phase 5)
 
 - `GET /v1/billing/status`
 - `POST /v1/billing/checkout` (store-specific; may be handled client-side)
 - `POST /v1/billing/webhook` (server-to-server)
 
-#### Account privacy
+#### Account privacy (Phase 5)
 
 - `POST /v1/account/export`
 - `POST /v1/account/delete`
@@ -519,14 +778,29 @@ All endpoints under `/v1`.
   - write `studentText`
 - `GENERATE_PROMPT(turnId)`
   - collect last N turns
+  - collect source context (extracted text for Tier 1; citation + title for Tier 2)
+  - collect session trivium stage
   - call model for strict JSON prompt
-  - validate; regenerate if invalid
+  - apply deterministic Socratic rules (Section 4.3)
+  - apply source-anchoring rules if applicable (Section 4.4)
+  - apply content question handling rules if applicable (Section 4.5)
+  - validate via enforcement loop (Section 4.6); regenerate if invalid
   - write `assistantText`, prompt metadata
 - `RENDER_ARTIFACTS(sessionId)`
   - build transcript (screenplay)
   - build summary (G/L/R sections)
   - build rubric
   - persist artifacts
+  - compute and store per-session metrics
+- `EXTRACT_LEDGER_CANDIDATES(sessionId)` (Phase 2)
+  - parse session transcript for candidate ledger entries
+  - extract verbatim quotes from student speech only
+  - classify entry type (thesis, definition, distinction, objection_response)
+  - create LedgerEntry records with status=candidate
+- `SCHEDULE_REVIEWS(sessionId)` (Phase 3)
+  - after session ends, create ReviewScheduleItems for approved ledger entries
+  - apply spacing algorithm (3/7/21 day defaults)
+  - generate prompt text for each review item
 
 ### 9.3 Speaking (TTS)
 
@@ -569,10 +843,14 @@ Computed from turns and artifacts when a session transitions to `ENDED`:
 
 - `turnCount` (int)
 - `durationSeconds` (int, `endedAt - startedAt`)
-- `promptTypeDistribution` (JSON object: `{ define: 3, distinguish: 1, objection: 2, ... }`)
-- `detectedIssueDistribution` (JSON object: `{ vague_term: 2, drift: 1, none: 4, ... }`)
+- `triviumStage` (string — which stage was selected)
+- `promptTypeDistribution` (JSON object: `{ define: 3, distinguish: 1, objection: 2, locate_passage: 1, reconcile: 0, ... }`)
+- `detectedIssueDistribution` (JSON object: `{ vague_term: 2, drift: 1, unsupported_by_source: 1, contradicts_source: 0, none: 4, ... }`)
 - `rubricScores` (from artifact: Clarity, Definitions, Structure, Objection-handling, Drift — each 1–5)
 - `avgResponseLatencyMs` (mean of per-turn latency — rough fluency proxy)
+- `sourceGroundingTier` (int — which tier was active for this session)
+- `sourceAnchoringEvents` (int — count of source-anchoring prompts triggered)
+- `timeboxCompliance` (string — on_target | too_short | too_long)
 
 ### 11.3 Storage
 
@@ -594,7 +872,7 @@ create table session_metrics (
 
 Populated by the `RENDER_ARTIFACTS` job (which already has access to all turns).
 
-### 11.4 Cross-session queries (post-MVP, but schema-ready now)
+### 11.4 Cross-session queries (Phase 4)
 
 With per-session metrics stored in structured form, cross-session trend queries become straightforward:
 
@@ -602,13 +880,21 @@ With per-session metrics stored in structured form, cross-session trend queries 
 - issue distribution shift (e.g., fewer `vague_term` flags over time)
 - session frequency / consistency
 - definition clarity trend (ratio of `define`/`distinguish` prompts to `vague_term` issues)
+- objection quality trajectory (strawman → steelman over time)
+- source fidelity trend (fewer `unsupported_by_source` / `contradicts_source` flags over time)
+- personal pattern detection ("you drift most when discussing [topic X]")
+- timebox compliance trend
 
-These power the progress signals described in PRODUCT.md. For v0.1, store the data; surface only per-session rubric in the review screen.
+These power the "argument fingerprint" — a personal profile of argumentative patterns and growth described in PRODUCT.md.
+
+Phase 1: store all per-session metrics. Surface per-session rubric in the review screen.
+Phase 4: cross-session trend views, argument fingerprint visualization, personal pattern detection.
 
 ### 11.5 API
 
-- `GET /v1/sessions/:sessionId/metrics` — returns per-session metrics
-- `GET /v1/topics/:topicId/metrics` (post-MVP) — returns aggregated trend data
+- `GET /v1/sessions/:sessionId/metrics` — returns per-session metrics (Phase 1)
+- `GET /v1/topics/:topicId/metrics` — returns aggregated trend data (Phase 4)
+- `GET /v1/analytics/fingerprint` — returns argument fingerprint for authenticated student (Phase 4)
 
 ---
 
@@ -692,21 +978,32 @@ Bundle:
 
 1) API clients (pure HTTP):
 - `TopicApiClient`
+- `SourceApiClient`
 - `SessionApiClient`
 - `FileApiClient`
-- `BillingApiClient`
+- `LedgerApiClient` (Phase 2)
+- `ReviewApiClient` (Phase 3)
+- `AnalyticsApiClient` (Phase 4)
+- `BillingApiClient` (Phase 5)
 
 2) Services (orchestrate + caching):
 - `TopicService`
+- `SourceService`
 - `SessionService`
 - `AudioService`
 - `ArtifactService`
+- `LedgerService` (Phase 2)
+- `ReviewService` (Phase 3)
 
 3) UI (screens)
 - TopicsListScreen
-- TopicDetailScreen
-- SessionScreen
-- SessionReviewScreen
+- TopicDetailScreen (includes sources + sessions)
+- SourceCreateScreen (photo/upload/reference/voice)
+- SessionScreen (audio-first, trivium stage selection)
+- SessionReviewScreen (rubric + transcript + ledger candidates)
+- LedgerScreen (Phase 2)
+- ReviewPromptScreen (Phase 3 — mini re-oralization session)
+- TrendsDashboardScreen (Phase 4)
 - AccountSettingsScreen
 
 ### 15.2 Suggested state management
@@ -728,28 +1025,31 @@ Pick one and stay consistent:
 
 ## 16) Implementation plan (phased)
 
-### Phase 0: foundations
+### Phase 0: foundations (done)
 
 - Repo setup (backend + mobile)
-- Auth flow
-- Database schema + Prisma
-- Topic CRUD
+- Auth flow (Supabase JWT)
+- Database schema + Prisma (Student, Topic, TopicFile)
+- Topic CRUD + TopicFile CRUD
+- S3 presigned upload flow
+- Test infrastructure
 
-### Phase 1: session loop
+### Phase 1: core session loop
 
 Phase 0 is complete (foundations are in place). Phase 1 should now be split into small backend-first PRs, each shipping one vertical slice.
 
 #### Phase 1 immediate next step (PR-1)
 
-**Implement session lifecycle API (draft → active → ended/aborted) with strict backend layering.**
+**Implement session lifecycle API (draft → active → ended/aborted) with strict backend layering, plus Source entity for source-grounding.**
 
 Scope:
 
+- Add `Source` types, data source, mapper, service, and CRUD routes (`POST /v1/topics/:topicId/sources`, `GET /v1/topics/:topicId/sources`, `DELETE /v1/sources/:sourceId`). Sources link uploaded files to topics for grounding (Section 4.4). Include `grounding_tier` derivation (Tier 1/2/3) based on whether extracted text is available.
 - Add `Session` types in all three layers (`src/types/api/session`, `src/types/service/session`, `src/types/data-source/session`) using per-operation kebab-case files and namespace barrels.
 - Add `SessionDataSource` (Prisma-only methods, `input` parameter naming, no business logic).
 - Add `SessionMapper` following the established static-class pattern in `src/mappers/` (e.g., `SessionMapper.getOne.output.fromDataSourceToService()`).
 - Add `SessionService` methods for:
-  - create draft session
+  - create draft session (accepts `triviumStage` — grammar/logic/rhetoric/combined per Section 4.1; and links to selected sources)
   - get single session (for use in later PRs and polling)
   - start session (enforce valid transition `DRAFT -> ACTIVE`)
   - end session (enforce valid transition `ACTIVE -> ENDED`)
@@ -764,20 +1064,23 @@ Scope:
   - `POST /v1/sessions/:sessionId/abort`
   - `DELETE /v1/sessions/:sessionId` (soft delete)
 - Declare Zod schemas in route config via `fastify-type-provider-zod`, consistent with existing topic routes (do NOT use manual `safeParse` — Phase 0 migrated away from that pattern).
-- Register `SessionDataSource` and `SessionService` in `src/lib/container.ts` so they are accessible via `fastify.container.services.session`.
+- Register `SourceDataSource`, `SourceService`, `SessionDataSource`, and `SessionService` in `src/lib/container.ts`.
 - Keep authorization behavior consistent with topic routes (student can only access their own topic/session records).
 
 Acceptance checks:
 
 - Unit tests for service state transitions (DRAFT→ACTIVE, ACTIVE→ENDED, ACTIVE→ABORTED) and invalid transitions (e.g., DRAFT→ENDED, ENDED→ACTIVE).
+- Unit tests for Source CRUD and grounding tier derivation.
 - Route tests for auth boundaries, 404 ownership behavior, and happy-path transitions.
 - No queue/STT/model calls yet in PR-1 (defer to PR-3/PR-4 below).
 
 #### Phase 1 PR split (backend-focused)
 
-1. **PR-1 — Session lifecycle (start now)**
+1. **PR-1 — Session lifecycle + Source entity (start now)**
+   - Source CRUD with grounding tier derivation (Section 4.4) and session-source linking.
    - Session CRUD-lite for draft/start/end/abort/list plus single-session retrieval, with full state-machine transition enforcement.
-   - Includes mapper, DI container wiring, and soft-delete endpoint.
+   - Session creation accepts `triviumStage` (grammar/logic/rhetoric/combined) per Section 4.1.
+   - Includes mappers, DI container wiring, and soft-delete endpoints.
 2. **PR-2 — Turn intake + audio presign**
    - Add turn type/data-source/service/route contracts. Add `TurnMapper` following established pattern.
    - Implement `POST /v1/sessions/:sessionId/turns/presign-audio` and `POST /v1/sessions/:sessionId/turns`.
@@ -791,24 +1094,49 @@ Acceptance checks:
 4. **PR-4 — STT integration + prompt generation enforcement loop**
    - Wire real STT provider into the `TRANSCRIBE_TURN` handler (replace no-op from PR-3). Persist `studentText` on the turn.
    - Implement strict structured output validation pipeline from Section 4.3 (schema, word cap, banned phrases, one-sentence check, bounded retries) in the `GENERATE_PROMPT` handler.
+   - Implement source-anchoring rules enforcement (Section 4.4): `locate_passage` and `reconcile` prompt types, grounding tier–aware behavior, anti-offloading constraint.
+   - Implement content question handling (Section 4.5): redirect → scaffold two-tier protocol. Detect direct content questions and respond with `redirect_to_student` on first ask, `scaffold` on repeated ask.
+   - Include `triviumStage` in model context so prompt type distribution follows the selected stage (Section 4.1).
    - Persist `assistantText`, `assistantPromptType`, `assistantDetectedIssue`, `latencyMs`.
 5. **PR-5 — Basic mobile session screen integration (client)**
    - Wire session start/record/upload/poll/end to backend endpoints with minimal UI controls.
+   - Trivium stage picker on session creation screen.
+   - Source selection on session creation (link existing sources to session).
    - Keep UI scope limited to proving the loop works end-to-end (real voice → STT → prompt → display).
 
-### Phase 2: artifacts + review
+### Phase 2: concept ledger
 
-- Transcript renderer
-- Summary + rubric generation
-- Session review screens
-- Export + delete account
+- EXTRACT_LEDGER_CANDIDATES job
+- LedgerEntry entity + CRUD
+- Candidate approval UX (voice or minimal taps)
+- Tagging + linking to topics/sources/other entries
+- Ledger view per topic
 
-### Phase 3: billing
+### Phase 3: spaced re-oralization
 
-- Trial cap
-- Paywall + subscription
+- ReviewScheduleItem entity
+- SCHEDULE_REVIEWS job
+- Mini re-oralization session flow (60–90 seconds)
+- Resurface prompts from Concept Ledger entries
+- In-app notification/prompt system
+
+### Phase 4: analytics + argument fingerprint
+
+- Cross-session trend queries
+- Form-based signal tracking aggregation
+- Personal pattern detection logic
+- Trends dashboard UI
+- Argument fingerprint visualization
+
+### Phase 5: billing + launch polish
+
+- Trial cap enforcement
+- Paywall + subscription (store-specific)
 - Webhook validation
-- Post-pay unlock
+- OCR extraction integration (for photo sources)
+- Reference lookup (for known canonical texts)
+- Account export + delete
+- Markdown export for external writing workflows
 
 ---
 
@@ -824,10 +1152,14 @@ Acceptance checks:
 
 ## 18) Open questions (explicitly tracked)
 
-- Do we do device TTS or server TTS for v0.1?
+- Do we do device TTS or server TTS for Phase 1?
 - Do we support streaming (websocket) or polling for prompt readiness?
 - Trial allowance: one session vs N minutes?
 - Storage provider choice: Supabase Storage vs S3 (cost/ops tradeoff)
+- Tier 2 source accuracy: how to handle cases where AI training knowledge of a canonical text is imprecise or edition-dependent? Surface a disclaimer?
+- Concept Ledger revision flow: when a student re-articulates a definition in a later session, how does the ledger handle versioning? Link old → new? Replace? Keep history?
+- Re-oralization notification UX: push notification vs in-app prompt on open? How to avoid notification fatigue?
+- Source grounding tier assignment: should the student self-declare grounding tier for references, or should the system probe/verify?
 
 ---
 
@@ -835,9 +1167,34 @@ Acceptance checks:
 
 (Provide as a template; implement in code, not in UI)
 
-- You are Dialogos. You speak in short, neutral prompts.
+- You are Dialogos. You speak in short, concise but conversational prompts.
 - You may only ask one question or give one instruction per turn.
 - You must not praise the student.
 - You must not recap what the student said unless asked.
 - You must not supply missing arguments or content.
+- You must not summarize or explain the source text.
 - Output MUST match the JSON schema exactly.
+
+Deterministic rules (enforce these strictly):
+- If the student uses a key term without defining it, interrupt and demand a definition.
+- If the student makes a claim without an example, demand an example.
+- If the student drifts from their thesis while responding to an objection, call out the drift and require restatement.
+- If the student equivocates on a term, ask for an explicit distinction.
+- If the student has not stated a conclusion, require one before proceeding.
+
+Source-anchoring rules (apply when source text is available):
+- If the student attributes a claim to the source without textual evidence, ask them to locate the passage.
+- If the student's paraphrase contradicts the source text, quote the source and ask them to reconcile.
+- If the student presents their own conclusion as the author's, ask them to distinguish.
+- Never explain what the source text means. Only use it to challenge, demand evidence, or flag contradictions.
+
+Content question handling (when student asks about material):
+- If the student asks for a summary, explanation, or meaning of source content, redirect Socratically: "What do you think the author means? Paraphrase it."
+- If the student asks again or says they are stuck, provide a partial scaffold — quote a relevant passage, narrow the question, or highlight a structural clue. Never provide the full answer.
+- Never summarize, interpret, or explain the source for the student. Give them something to push against, not something to copy.
+
+Session context:
+- Topic: {{topic.title}} ({{topic.description}})
+- Trivium stage: {{session.triviumStage}}
+- Source: {{source.title}} ({{source.sourceType}}, Tier {{source.groundingTier}})
+- Source text (if available): {{source.extractedText | truncate}}
