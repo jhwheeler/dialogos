@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { Prisma } from "@prisma/client";
 import type {
   CreateOneTurnServiceInput,
   CreateOneTurnServiceOutput,
@@ -16,6 +17,8 @@ import { TurnDataSource } from "../../data-sources/turn/turn.data-source.js";
 import { SessionDataSource } from "../../data-sources/session/session.data-source.js";
 import type { StorageProvider } from "../../lib/storage/storage.js";
 import { TurnMapper } from "../../mappers/turn.mapper.js";
+
+const MAX_INDEX_RETRIES = 3;
 
 export class TurnService {
   public constructor(
@@ -60,7 +63,11 @@ export class TurnService {
       throw ApiError.internal("Storage provider is not configured");
     }
 
-    const safeName = input.originalName.replace(/[/\\]/g, "_");
+    const safeName = input.originalName
+      .replace(/\.\./g, "_")
+      .replace(/[/\\]/g, "_")
+      .replace(/[\x00-\x1f]/g, "")
+      .replace(/[^a-zA-Z0-9._-]/g, "_");
     const storageKey = `turns/${input.sessionId}/audio/${crypto.randomUUID()}/${safeName}`;
 
     const uploadUrl = await this.storage.getPresignedUploadUrl(storageKey, input.mimeType);
@@ -77,23 +84,39 @@ export class TurnService {
       );
     }
 
-    const index = await this.turnDataSource.countBySession({
-      sessionId: input.sessionId,
-    });
+    for (let attempt = 0; attempt < MAX_INDEX_RETRIES; attempt++) {
+      const index = await this.turnDataSource.countBySession({
+        sessionId: input.sessionId,
+      });
 
-    const turn = await this.turnDataSource.createOne({
-      sessionId: input.sessionId,
-      index,
-      studentAudioKey: input.studentAudioKey,
-    });
+      try {
+        const turn = await this.turnDataSource.createOne({
+          sessionId: input.sessionId,
+          index,
+          studentAudioKey: input.studentAudioKey,
+        });
 
-    return TurnMapper.createOne.output.fromDataSourceToService(turn);
+        return TurnMapper.createOne.output.fromDataSourceToService(turn);
+      } catch (error) {
+        const isUniqueViolation =
+          error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+        if (!isUniqueViolation || attempt === MAX_INDEX_RETRIES - 1) {
+          throw error;
+        }
+      }
+    }
+
+    throw new ConflictError("Unable to assign turn index due to concurrent requests");
   }
 
   public async getOne(input: GetOneTurnServiceInput): Promise<GetOneTurnServiceOutput> {
     const turn = await this.turnDataSource.getOne({ id: input.id });
 
     if (!turn) {
+      throw new NotFoundError("Turn not found");
+    }
+
+    if (turn.sessionId !== input.sessionId) {
       throw new NotFoundError("Turn not found");
     }
 

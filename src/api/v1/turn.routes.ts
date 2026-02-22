@@ -92,6 +92,7 @@ export const turnRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const serviceOutput = await turnService.getOne({
         id: request.params.turnId,
+        sessionId: request.params.sessionId,
         studentId: request.studentId,
       });
 

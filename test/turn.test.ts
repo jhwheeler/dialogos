@@ -512,6 +512,16 @@ describe("Turn intake + audio presign routes", () => {
       expect(response.statusCode).toBe(401);
     });
 
+    it("returns 401 for unauthenticated get single turn request", async () => {
+      const fakeId = crypto.randomUUID();
+      const response = await app.inject({
+        method: "GET",
+        url: `/v1/sessions/${activeSessionId}/turns/${fakeId}`,
+      });
+
+      expect(response.statusCode).toBe(401);
+    });
+
     it("returns 401 for unauthenticated list turns request", async () => {
       const response = await app.inject({
         method: "GET",

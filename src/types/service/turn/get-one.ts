@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const GetOneTurnServiceInputSchema = z.object({
   id: z.string().uuid(),
+  sessionId: z.string().uuid(),
   studentId: z.string().uuid(),
 });
 

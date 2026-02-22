@@ -7,8 +7,8 @@ export const PresignAudioTurnApiParamsSchema = z.object({
 export type PresignAudioTurnApiParams = z.infer<typeof PresignAudioTurnApiParamsSchema>;
 
 export const PresignAudioTurnApiBodySchema = z.object({
-  originalName: z.string(),
-  mimeType: z.string(),
+  originalName: z.string().min(1).max(255),
+  mimeType: z.string().regex(/^audio\//, "mimeType must start with 'audio/'"),
   sizeBytes: z.coerce.number().int().positive(),
 });
 
