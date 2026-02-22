@@ -5,7 +5,7 @@ async function main() {
   const env = parseEnv();
   const app = buildApp();
 
-  // Graceful shutdown on SIGTERM/SIGINT (A10.2)
+  // Graceful shutdown: close connections cleanly before exiting
   for (const signal of ["SIGTERM", "SIGINT"] as const) {
     process.on(signal, async () => {
       app.log.info({ signal }, "Received signal, shutting down gracefully");

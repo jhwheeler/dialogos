@@ -7,7 +7,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
-# Default to read-only; deploy job overrides (A9.2)
+# Default to read-only; deploy job overrides with write for gh-pages
 permissions:
   contents: read
 
@@ -85,7 +85,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Audit dependencies (A9.3)
+      - name: Audit dependencies
         run: npm audit --audit-level=high
 
   test:
