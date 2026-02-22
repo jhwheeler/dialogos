@@ -37,7 +37,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({ sessions: serviceOutput });
+      return reply.send({ items: serviceOutput, count: serviceOutput.length });
     },
   );
 

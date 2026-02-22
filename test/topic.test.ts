@@ -61,7 +61,7 @@ describe("Topic CRUD routes", () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({ topics: [] });
+      expect(response.json()).toEqual({ items: [], count: 0 });
     });
 
     it("returns only non-deleted topics for the authenticated student", async () => {
@@ -89,8 +89,9 @@ describe("Topic CRUD routes", () => {
 
       expect(response.statusCode).toBe(200);
       const body = response.json();
-      expect(body.topics).toHaveLength(1);
-      expect(body.topics[0].title).toBe("Active Topic");
+      expect(body.items).toHaveLength(1);
+      expect(body.count).toBe(1);
+      expect(body.items[0].title).toBe("Active Topic");
     });
   });
 
@@ -279,7 +280,7 @@ describe("Topic CRUD routes", () => {
         headers: authHeader(tokenA),
       });
       const listBody = listResponse.json();
-      const ids = listBody.topics.map((t: { id: string }) => t.id);
+      const ids = listBody.items.map((t: { id: string }) => t.id);
       expect(ids).not.toContain(created.id);
     });
 
@@ -360,7 +361,7 @@ describe("Topic CRUD routes", () => {
 
       expect(response.statusCode).toBe(200);
       const body = response.json();
-      const ids = body.topics.map((t: { id: string }) => t.id);
+      const ids = body.items.map((t: { id: string }) => t.id);
       expect(ids).not.toContain(topicAId);
     });
   });
@@ -465,9 +466,10 @@ describe("Topic CRUD routes", () => {
       });
 
       const body = response.json();
-      expect(body.topics).toHaveLength(2);
-      expect(body.topics[0].title).toBe("Second Created");
-      expect(body.topics[1].title).toBe("First Created");
+      expect(body.items).toHaveLength(2);
+      expect(body.count).toBe(2);
+      expect(body.items[0].title).toBe("Second Created");
+      expect(body.items[1].title).toBe("First Created");
     });
 
     it("PATCH updates the updatedAt timestamp", async () => {

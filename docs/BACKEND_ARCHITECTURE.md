@@ -318,6 +318,43 @@ export const widgetRoutes: FastifyPluginAsync = async (fastify) => {
 };
 ```
 
+## Standard list response envelope
+
+All list (getMany) endpoints return a consistent envelope:
+
+```json
+{
+  "items": [ /* array of entity objects */ ],
+  "count": 3
+}
+```
+
+- `items` — the array of results, using the same object shape as the corresponding getOne endpoint.
+- `count` — integer, equal to `items.length`. Present for consistency and to support future pagination (where `count` may represent the total across all pages).
+
+Example API output schema:
+
+```ts
+export const GetManyWidgetApiOutputSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.string().uuid(),
+      name: z.string(),
+    }),
+  ),
+  count: z.number().int(),
+});
+```
+
+Route handler pattern:
+
+```ts
+const serviceOutput = await widgetService.getMany({ ... });
+return reply.send({ items: serviceOutput, count: serviceOutput.length });
+```
+
+Do **not** use entity-specific wrapper keys (e.g., `{ widgets: [...] }`, `{ topics: [...] }`). The generic `items` key keeps the envelope uniform across all entities.
+
 ## Error class conventions
 
 Create explicit domain/application errors, then map to a normalized API error envelope.

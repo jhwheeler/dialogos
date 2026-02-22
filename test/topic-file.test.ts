@@ -74,7 +74,7 @@ describe("Topic File CRUD routes", () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({ files: [] });
+      expect(response.json()).toEqual({ items: [], count: 0 });
     });
 
     it("returns files after one has been created", async () => {
@@ -101,8 +101,9 @@ describe("Topic File CRUD routes", () => {
 
       expect(response.statusCode).toBe(200);
       const body = response.json();
-      expect(body.files).toHaveLength(1);
-      expect(body.files[0].originalName).toBe("notes.pdf");
+      expect(body.items).toHaveLength(1);
+      expect(body.count).toBe(1);
+      expect(body.items[0].originalName).toBe("notes.pdf");
     });
   });
 
@@ -186,7 +187,7 @@ describe("Topic File CRUD routes", () => {
       });
 
       expect(listResponse.statusCode).toBe(200);
-      expect(listResponse.json()).toEqual({ files: [] });
+      expect(listResponse.json()).toEqual({ items: [], count: 0 });
     });
   });
 
@@ -273,7 +274,7 @@ describe("Topic File CRUD routes", () => {
         headers: authHeader(tokenA),
       });
       expect(listResponse.statusCode).toBe(200);
-      expect(listResponse.json().files).toHaveLength(1);
+      expect(listResponse.json().items).toHaveLength(1);
     });
   });
 
@@ -504,9 +505,10 @@ describe("Topic File CRUD routes", () => {
       });
 
       const body = response.json();
-      expect(body.files).toHaveLength(2);
-      expect(body.files[0].originalName).toBe("second.pdf");
-      expect(body.files[1].originalName).toBe("first.pdf");
+      expect(body.items).toHaveLength(2);
+      expect(body.count).toBe(2);
+      expect(body.items[0].originalName).toBe("second.pdf");
+      expect(body.items[1].originalName).toBe("first.pdf");
     });
 
     it("returns 404 when Student B tries to presign on Student A's topic", async () => {

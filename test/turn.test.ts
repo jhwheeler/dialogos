@@ -320,7 +320,7 @@ describe("Turn intake + audio presign routes", () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({ turns: [] });
+      expect(response.json()).toEqual({ items: [], count: 0 });
     });
 
     it("returns turns ordered by index", async () => {
@@ -352,13 +352,14 @@ describe("Turn intake + audio presign routes", () => {
 
       expect(response.statusCode).toBe(200);
       const body = response.json();
-      expect(body.turns).toHaveLength(3);
-      expect(body.turns[0].index).toBe(0);
-      expect(body.turns[1].index).toBe(1);
-      expect(body.turns[2].index).toBe(2);
-      expect(body.turns[0].studentAudioKey).toBe(audioKey("turn0.webm"));
-      expect(body.turns[1].studentAudioKey).toBe(audioKey("turn1.webm"));
-      expect(body.turns[2].studentAudioKey).toBe(audioKey("turn2.webm"));
+      expect(body.items).toHaveLength(3);
+      expect(body.count).toBe(3);
+      expect(body.items[0].index).toBe(0);
+      expect(body.items[1].index).toBe(1);
+      expect(body.items[2].index).toBe(2);
+      expect(body.items[0].studentAudioKey).toBe(audioKey("turn0.webm"));
+      expect(body.items[1].studentAudioKey).toBe(audioKey("turn1.webm"));
+      expect(body.items[2].studentAudioKey).toBe(audioKey("turn2.webm"));
     });
 
     it("returns 404 when accessing another student's session turns", async () => {

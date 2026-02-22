@@ -36,7 +36,7 @@ export const topicFileRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({ files: serviceOutput });
+      return reply.send({ items: serviceOutput, count: serviceOutput.length });
     },
   );
 

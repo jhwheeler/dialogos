@@ -38,7 +38,7 @@ export const sourceRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({ sources: serviceOutput });
+      return reply.send({ items: serviceOutput, count: serviceOutput.length });
     },
   );
 

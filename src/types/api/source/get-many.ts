@@ -7,7 +7,7 @@ export const GetManySourceApiParamsSchema = z.object({
 export type GetManySourceApiParams = z.infer<typeof GetManySourceApiParamsSchema>;
 
 export const GetManySourceApiOutputSchema = z.object({
-  sources: z.array(
+  items: z.array(
     z.object({
       id: z.string().uuid(),
       topicId: z.string().uuid(),
@@ -20,6 +20,7 @@ export const GetManySourceApiOutputSchema = z.object({
       createdAt: z.string().datetime(),
     }),
   ),
+  count: z.number().int(),
 });
 
 export type GetManySourceApiOutput = z.infer<typeof GetManySourceApiOutputSchema>;

@@ -109,7 +109,7 @@ export const turnRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      return reply.send({ turns: serviceOutput });
+      return reply.send({ items: serviceOutput, count: serviceOutput.length });
     },
   );
 };

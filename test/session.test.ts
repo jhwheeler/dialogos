@@ -153,7 +153,7 @@ describe("Session CRUD + lifecycle routes", () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({ sessions: [] });
+      expect(response.json()).toEqual({ items: [], count: 0 });
     });
 
     it("returns only non-deleted sessions for the topic", async () => {
@@ -183,8 +183,9 @@ describe("Session CRUD + lifecycle routes", () => {
 
       expect(response.statusCode).toBe(200);
       const body = response.json();
-      expect(body.sessions).toHaveLength(1);
-      expect(body.sessions[0].triviumStage).toBe("combined");
+      expect(body.items).toHaveLength(1);
+      expect(body.count).toBe(1);
+      expect(body.items[0].triviumStage).toBe("combined");
     });
 
     it("returns 404 when listing sessions on another student's topic", async () => {
@@ -511,7 +512,7 @@ describe("Session CRUD + lifecycle routes", () => {
         url: `/v1/topics/${topicAId}/sessions`,
         headers: authHeader(tokenA),
       });
-      expect(listResponse.json().sessions).toHaveLength(0);
+      expect(listResponse.json().items).toHaveLength(0);
 
       // Verify GET by id returns 404
       const getResponse = await app.inject({

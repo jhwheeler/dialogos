@@ -7,7 +7,7 @@ export const GetManySessionApiParamsSchema = z.object({
 export type GetManySessionApiParams = z.infer<typeof GetManySessionApiParamsSchema>;
 
 export const GetManySessionApiOutputSchema = z.object({
-  sessions: z.array(
+  items: z.array(
     z.object({
       id: z.string().uuid(),
       topicId: z.string().uuid(),
@@ -19,6 +19,7 @@ export const GetManySessionApiOutputSchema = z.object({
       createdAt: z.string().datetime(),
     }),
   ),
+  count: z.number().int(),
 });
 
 export type GetManySessionApiOutput = z.infer<typeof GetManySessionApiOutputSchema>;
