@@ -277,6 +277,255 @@ describe("Topic File CRUD routes", () => {
     });
   });
 
+  // ─── Additional edge cases ─────────────────────────────────────
+
+  describe("Edge cases", () => {
+    it("returns 404 when deleting a non-existent file", async () => {
+      const fakeFileId = crypto.randomUUID();
+
+      const response = await app.inject({
+        method: "DELETE",
+        url: `/v1/topics/${topicAId}/files/${fakeFileId}`,
+        headers: authHeader(tokenA),
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it("returns 404 when deleting an already-deleted file", async () => {
+      // Create a file
+      const createResponse = await app.inject({
+        method: "POST",
+        url: `/v1/topics/${topicAId}/files`,
+        headers: authHeader(tokenA),
+        payload: {
+          storageKey: `topics/${topicAId}/files/${crypto.randomUUID()}/double-delete.pdf`,
+          kind: "pdf",
+          originalName: "double-delete.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 100,
+        },
+      });
+      expect(createResponse.statusCode).toBe(201);
+      const fileId = createResponse.json().id;
+
+      // First delete succeeds
+      const firstDelete = await app.inject({
+        method: "DELETE",
+        url: `/v1/topics/${topicAId}/files/${fileId}`,
+        headers: authHeader(tokenA),
+      });
+      expect(firstDelete.statusCode).toBe(200);
+
+      // Second delete returns 404
+      const secondDelete = await app.inject({
+        method: "DELETE",
+        url: `/v1/topics/${topicAId}/files/${fileId}`,
+        headers: authHeader(tokenA),
+      });
+      expect(secondDelete.statusCode).toBe(404);
+    });
+
+    it("returns 404 when creating a file on a non-existent topic", async () => {
+      const fakeTopicId = crypto.randomUUID();
+
+      const response = await app.inject({
+        method: "POST",
+        url: `/v1/topics/${fakeTopicId}/files`,
+        headers: authHeader(tokenA),
+        payload: {
+          storageKey: `topics/${fakeTopicId}/files/${crypto.randomUUID()}/orphan.pdf`,
+          kind: "pdf",
+          originalName: "orphan.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 100,
+        },
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it("returns 404 when requesting presign for a non-existent topic", async () => {
+      const fakeTopicId = crypto.randomUUID();
+
+      const response = await app.inject({
+        method: "POST",
+        url: `/v1/topics/${fakeTopicId}/files/presign`,
+        headers: authHeader(tokenA),
+        payload: {
+          kind: "pdf",
+          originalName: "test.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 100,
+        },
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it("returns 400 when POST /files is missing required fields individually", async () => {
+      // Missing storageKey
+      const noStorageKey = await app.inject({
+        method: "POST",
+        url: `/v1/topics/${topicAId}/files`,
+        headers: authHeader(tokenA),
+        payload: {
+          kind: "pdf",
+          originalName: "test.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 100,
+        },
+      });
+      expect(noStorageKey.statusCode).toBe(400);
+
+      // Missing kind
+      const noKind = await app.inject({
+        method: "POST",
+        url: `/v1/topics/${topicAId}/files`,
+        headers: authHeader(tokenA),
+        payload: {
+          storageKey: "some-key",
+          originalName: "test.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 100,
+        },
+      });
+      expect(noKind.statusCode).toBe(400);
+
+      // Missing originalName
+      const noName = await app.inject({
+        method: "POST",
+        url: `/v1/topics/${topicAId}/files`,
+        headers: authHeader(tokenA),
+        payload: {
+          storageKey: "some-key",
+          kind: "pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 100,
+        },
+      });
+      expect(noName.statusCode).toBe(400);
+
+      // Missing sizeBytes
+      const noSize = await app.inject({
+        method: "POST",
+        url: `/v1/topics/${topicAId}/files`,
+        headers: authHeader(tokenA),
+        payload: {
+          storageKey: "some-key",
+          kind: "pdf",
+          originalName: "test.pdf",
+          mimeType: "application/pdf",
+        },
+      });
+      expect(noSize.statusCode).toBe(400);
+    });
+
+    it("returns 400 when POST /files/presign is missing required fields", async () => {
+      // Missing kind
+      const response = await app.inject({
+        method: "POST",
+        url: `/v1/topics/${topicAId}/files/presign`,
+        headers: authHeader(tokenA),
+        payload: {
+          originalName: "test.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 100,
+        },
+      });
+      expect(response.statusCode).toBe(400);
+    });
+
+    it("POST /files response includes correct fields", async () => {
+      const storageKey = `topics/${topicAId}/files/${crypto.randomUUID()}/shape.pdf`;
+
+      const response = await app.inject({
+        method: "POST",
+        url: `/v1/topics/${topicAId}/files`,
+        headers: authHeader(tokenA),
+        payload: {
+          storageKey,
+          kind: "pdf",
+          originalName: "shape.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 999,
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+      const body = response.json();
+      expect(body).toEqual({
+        id: expect.any(String),
+        kind: "pdf",
+        storageKey,
+        originalName: "shape.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 999,
+        createdAt: expect.any(String),
+      });
+      // Should NOT leak internal fields
+      expect(body).not.toHaveProperty("topicId");
+      expect(body).not.toHaveProperty("deletedAt");
+    });
+
+    it("GET /files returns files in descending createdAt order", async () => {
+      await app.inject({
+        method: "POST",
+        url: `/v1/topics/${topicAId}/files`,
+        headers: authHeader(tokenA),
+        payload: {
+          storageKey: `topics/${topicAId}/files/${crypto.randomUUID()}/first.pdf`,
+          kind: "pdf",
+          originalName: "first.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 100,
+        },
+      });
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      await app.inject({
+        method: "POST",
+        url: `/v1/topics/${topicAId}/files`,
+        headers: authHeader(tokenA),
+        payload: {
+          storageKey: `topics/${topicAId}/files/${crypto.randomUUID()}/second.pdf`,
+          kind: "pdf",
+          originalName: "second.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 200,
+        },
+      });
+
+      const response = await app.inject({
+        method: "GET",
+        url: `/v1/topics/${topicAId}/files`,
+        headers: authHeader(tokenA),
+      });
+
+      const body = response.json();
+      expect(body.files).toHaveLength(2);
+      expect(body.files[0].originalName).toBe("second.pdf");
+      expect(body.files[1].originalName).toBe("first.pdf");
+    });
+
+    it("returns 404 when Student B tries to presign on Student A's topic", async () => {
+      const response = await app.inject({
+        method: "POST",
+        url: `/v1/topics/${topicAId}/files/presign`,
+        headers: authHeader(tokenB),
+        payload: {
+          kind: "pdf",
+          originalName: "hijack.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 100,
+        },
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+  });
+
   // ─── Non-existent topic ─────────────────────────────────────────
 
   describe("Non-existent topic", () => {
