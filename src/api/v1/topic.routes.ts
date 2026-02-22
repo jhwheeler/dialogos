@@ -34,8 +34,7 @@ export const topicRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      const output = GetManyTopicApiOutputSchema.parse({ topics: serviceOutput });
-      return reply.send(output);
+      return reply.send({ topics: serviceOutput });
     },
   );
 
@@ -57,8 +56,7 @@ export const topicRoutes: FastifyPluginAsync = async (fastify) => {
         ...request.body,
       });
 
-      const output = CreateOneTopicApiOutputSchema.parse(serviceOutput);
-      return reply.status(201).send(output);
+      return reply.status(201).send(serviceOutput);
     },
   );
 
@@ -80,8 +78,7 @@ export const topicRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      const output = GetOneTopicApiOutputSchema.parse(serviceOutput);
-      return reply.send(output);
+      return reply.send(serviceOutput);
     },
   );
 
@@ -105,8 +102,7 @@ export const topicRoutes: FastifyPluginAsync = async (fastify) => {
         ...request.body,
       });
 
-      const output = UpdateOneTopicApiOutputSchema.parse(serviceOutput);
-      return reply.send(output);
+      return reply.send(serviceOutput);
     },
   );
 

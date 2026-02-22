@@ -64,8 +64,7 @@ export const turnRoutes: FastifyPluginAsync = async (fastify) => {
         studentAudioKey: request.body.studentAudioKey,
       });
 
-      const output = CreateOneTurnApiOutputSchema.parse(serviceOutput);
-      return reply.status(201).send(output);
+      return reply.status(201).send(serviceOutput);
     },
   );
 
@@ -88,8 +87,7 @@ export const turnRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      const output = GetOneTurnApiOutputSchema.parse(serviceOutput);
-      return reply.send(output);
+      return reply.send(serviceOutput);
     },
   );
 
@@ -111,8 +109,7 @@ export const turnRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      const output = GetManyTurnApiOutputSchema.parse({ turns: serviceOutput });
-      return reply.send(output);
+      return reply.send({ turns: serviceOutput });
     },
   );
 };

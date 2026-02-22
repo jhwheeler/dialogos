@@ -37,8 +37,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      const output = GetManySessionApiOutputSchema.parse({ sessions: serviceOutput });
-      return reply.send(output);
+      return reply.send({ sessions: serviceOutput });
     },
   );
 
@@ -62,8 +61,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
         ...request.body,
       });
 
-      const output = CreateOneSessionApiOutputSchema.parse(serviceOutput);
-      return reply.status(201).send(output);
+      return reply.status(201).send(serviceOutput);
     },
   );
 
@@ -85,8 +83,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      const output = GetOneSessionApiOutputSchema.parse(serviceOutput);
-      return reply.send(output);
+      return reply.send(serviceOutput);
     },
   );
 
@@ -108,8 +105,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      const output = SessionTransitionApiOutputSchema.parse(serviceOutput);
-      return reply.send(output);
+      return reply.send(serviceOutput);
     },
   );
 
@@ -131,8 +127,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      const output = SessionTransitionApiOutputSchema.parse(serviceOutput);
-      return reply.send(output);
+      return reply.send(serviceOutput);
     },
   );
 
@@ -154,8 +149,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      const output = SessionTransitionApiOutputSchema.parse(serviceOutput);
-      return reply.send(output);
+      return reply.send(serviceOutput);
     },
   );
 

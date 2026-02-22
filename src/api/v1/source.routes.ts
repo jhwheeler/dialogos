@@ -38,8 +38,7 @@ export const sourceRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      const output = GetManySourceApiOutputSchema.parse({ sources: serviceOutput });
-      return reply.send(output);
+      return reply.send({ sources: serviceOutput });
     },
   );
 
@@ -63,8 +62,7 @@ export const sourceRoutes: FastifyPluginAsync = async (fastify) => {
         ...request.body,
       });
 
-      const output = CreateOneSourceApiOutputSchema.parse(serviceOutput);
-      return reply.status(201).send(output);
+      return reply.status(201).send(serviceOutput);
     },
   );
 
@@ -86,8 +84,7 @@ export const sourceRoutes: FastifyPluginAsync = async (fastify) => {
         studentId: request.studentId,
       });
 
-      const output = GetOneSourceApiOutputSchema.parse(serviceOutput);
-      return reply.send(output);
+      return reply.send(serviceOutput);
     },
   );
 
@@ -111,8 +108,7 @@ export const sourceRoutes: FastifyPluginAsync = async (fastify) => {
         ...request.body,
       });
 
-      const output = UpdateOneSourceApiOutputSchema.parse(serviceOutput);
-      return reply.send(output);
+      return reply.send(serviceOutput);
     },
   );
 
