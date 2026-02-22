@@ -19,6 +19,20 @@ enum SessionStatus {
   aborted
 }
 
+enum TriviumStage {
+  grammar
+  logic
+  rhetoric
+  combined
+}
+
+enum SourceType {
+  photo_ocr
+  document
+  reference
+  voice_summary
+}
+
 model Student {
   id                    String   @id @default(uuid()) @db.Uuid
   email                 String?
@@ -47,6 +61,7 @@ model Topic {
 
   student  Student   @relation(fields: [studentId], references: [id])
   files    TopicFile[]
+  sources  Source[]
   sessions Session[]
 
   @@map("topics")
@@ -63,15 +78,37 @@ model TopicFile {
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  topic Topic @relation(fields: [topicId], references: [id])
+  topic   Topic    @relation(fields: [topicId], references: [id])
+  sources Source[]
 
   @@map("topic_files")
+}
+
+model Source {
+  id            String     @id @default(uuid()) @db.Uuid
+  topicId       String     @map("topic_id") @db.Uuid
+  topicFileId   String?    @map("topic_file_id") @db.Uuid
+  sourceType    SourceType @map("source_type")
+  title         String
+  citation      String?
+  extractedText String?    @map("extracted_text")
+  groundingTier Int        @default(3) @map("grounding_tier")
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  deletedAt     DateTime?  @map("deleted_at") @db.Timestamptz(6)
+
+  topic     Topic      @relation(fields: [topicId], references: [id])
+  topicFile TopicFile? @relation(fields: [topicFileId], references: [id])
+  sessions  Session[]
+
+  @@map("sources")
 }
 
 model Session {
   id                String        @id @default(uuid()) @db.Uuid
   studentId         String        @map("student_id") @db.Uuid
   topicId           String        @map("topic_id") @db.Uuid
+  sourceId          String?       @map("source_id") @db.Uuid
+  triviumStage      TriviumStage  @default(combined) @map("trivium_stage")
   status            SessionStatus
   startedAt         DateTime?     @map("started_at") @db.Timestamptz(6)
   endedAt           DateTime?     @map("ended_at") @db.Timestamptz(6)
@@ -82,6 +119,7 @@ model Session {
 
   student   Student           @relation(fields: [studentId], references: [id])
   topic     Topic             @relation(fields: [topicId], references: [id])
+  source    Source?           @relation(fields: [sourceId], references: [id])
   turns     Turn[]
   artifacts SessionArtifact[]
 

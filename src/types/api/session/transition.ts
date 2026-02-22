@@ -1,0 +1,20 @@
+import { z } from "zod";
+
+export const SessionTransitionApiParamsSchema = z.object({
+  sessionId: z.string().uuid(),
+});
+
+export type SessionTransitionApiParams = z.infer<typeof SessionTransitionApiParamsSchema>;
+
+export const SessionTransitionApiOutputSchema = z.object({
+  id: z.string().uuid(),
+  topicId: z.string().uuid(),
+  sourceId: z.string().uuid().nullable(),
+  triviumStage: z.enum(["grammar", "logic", "rhetoric", "combined"]),
+  status: z.enum(["draft", "active", "ended", "aborted"]),
+  startedAt: z.string().datetime().nullable(),
+  endedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+});
+
+export type SessionTransitionApiOutput = z.infer<typeof SessionTransitionApiOutputSchema>;
