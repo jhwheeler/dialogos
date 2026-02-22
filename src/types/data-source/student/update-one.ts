@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { StudentSettingsSchema } from "../../shared/student-settings.js";
 
 export const UpdateOneStudentDataSourceInputSchema = z.object({
   id: z.string().uuid(),
-  displayName: z.string().optional(),
-  settings: z.record(z.unknown()).optional(),
+  displayName: z.string().min(1).max(500).optional(),
+  settings: StudentSettingsSchema.optional(),
   plan: z.enum(["free", "paid"]).optional(),
-  trialRemainingSeconds: z.number().int().optional(),
+  trialRemainingSeconds: z.number().int().nonnegative().optional(),
 });
 
 export type UpdateOneStudentDataSourceInput = z.infer<typeof UpdateOneStudentDataSourceInputSchema>;

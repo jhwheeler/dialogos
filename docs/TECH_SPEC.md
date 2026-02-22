@@ -506,6 +506,95 @@ stateDiagram-v2
 - Use Zod (or equivalent) for request/response validation.
 - For AI prompt outputs, validate strictly and regenerate if invalid.
 
+### 6.4 Security hardening
+
+The following security measures are required at the backend layer. These were identified in the security audit (see `docs/SECURITY_AUDIT.md`).
+
+#### 6.4.1 Input validation constraints
+
+All string inputs must have length constraints enforced via Zod:
+
+| Field | Max length | Notes |
+|-------|-----------|-------|
+| `title` (topics, sources) | 500 | `.min(1).max(500)` |
+| `description` (topics) | 5,000 | `.max(5000)` |
+| `citation` (sources) | 1,000 | `.max(1000)` |
+| `extractedText` (sources) | 500,000 | `.max(500_000)` |
+| `originalName` (files) | 500 | `.min(1).max(500)` |
+| `mimeType` (files) | 255 | `.max(255)` |
+| `displayName` (students) | 500 | `.min(1).max(500)` |
+
+File uploads:
+- `kind` field: enum-validated (`pdf | image | text | other`)
+- `sizeBytes`: max 50 MB (`52_428_800`)
+- `storageKey`: validated against regex `^topics/[a-f0-9-]{36}/files/[a-f0-9-]{36}/.+$`
+
+Student settings: strict schema — `{ voiceRate?: number, autoplay?: boolean, strictness?: "low" | "medium" | "high" }`. Reject unknown keys.
+
+Billing-sensitive fields (`plan`, `trialRemainingSeconds`) must never be accepted from client input. These are server-only.
+
+#### 6.4.2 HTTP security
+
+- **CORS**: Explicit origin allowlist via `CORS_ORIGIN` env var (comma-separated). Falls back to permissive only in dev/test; production rejects unrecognized origins.
+- **Security headers**: `@fastify/helmet` with HSTS enabled (`max-age: 31536000`).
+- **Rate limiting**: `@fastify/rate-limit` — 100 requests/minute default. Tighter limits on mutation and auth endpoints.
+- **Body limit**: Explicit 1 MB default via Fastify `bodyLimit`. Routes needing larger payloads (e.g., source creation with `extractedText`) override per-route.
+- **Swagger UI**: Restricted to non-production (`NODE_ENV !== "production"`).
+
+#### 6.4.3 Authentication hardening
+
+- JWT verification with explicit algorithm restriction (`HS256`).
+- In-memory known-student cache bounded to 10,000 entries (evicts oldest on overflow).
+- Filename sanitization: strip `..`, `/`, `\`, null bytes, control characters, and limit to 255 chars.
+- Presigned upload URLs include `ContentLength` condition to prevent oversized uploads.
+- Error messages must not leak internal state (e.g., session status). Log details server-side; return generic messages to client.
+- Graceful shutdown on `SIGTERM`/`SIGINT` to close connections cleanly.
+
+#### 6.4.4 LLM prompt injection mitigations (Phase 1 turn pipeline)
+
+Student speech enters the model context via STT transcription. To mitigate prompt injection:
+
+1. **Delimiter isolation**: Wrap student text in clearly delineated delimiters (e.g., `<student_speech>...</student_speech>`) that the system prompt instructs the model to treat as user content only.
+2. **Input sanitization**: Strip control characters and enforce length limits on transcribed text before prompt inclusion.
+3. **Source text sanitization**: Strip non-printable characters and control sequences from `extractedText` before including in the model context. Clearly delineate source text with role-based markers.
+4. **Structured output validation**: The enforcement loop (Section 4.6) validates all model output against the strict JSON schema — this limits what a prompt injection could achieve even if the model is manipulated.
+5. **Output field validation**: Validate `assistantPromptType` and `assistantDetectedIssue` against their expected enums at the persistence layer, not just schema-level.
+6. **Monitoring**: Track retry rates per session and flag anomalous model output distributions.
+
+#### 6.4.5 Audio upload validation (Phase 1 turn pipeline)
+
+- Validate MIME type on presigned audio URLs (`audio/webm`, `audio/wav`, etc.).
+- After upload, verify the file is actually audio before processing (lightweight probe).
+- Maximum audio file size: 10 MB per turn.
+
+#### 6.4.6 Turn index concurrency (Phase 1 PR-2)
+
+Use an atomic `INSERT ... SELECT MAX(index) + 1` query or a database sequence for turn index assignment. Handle unique constraint violations (`@@unique([sessionId, index])`) with a bounded retry.
+
+#### 6.4.7 Webhook security (Phase 5)
+
+- All billing webhook endpoints must verify HMAC signatures from the payment provider.
+- Webhook processing must be idempotent — track processed webhook IDs and skip duplicates.
+
+#### 6.4.8 Privacy & data deletion
+
+- Hard-delete job must be implemented before launch. Define retention window (e.g., 30 days after soft-delete).
+- Cascade soft-delete: deleting a topic must cascade to sessions, files, and sources.
+- Concept Ledger `verbatimText` is sensitive personal data — include in export/deletion flows, verify encryption at rest.
+- Replace `linkedEntryIds` UUID array with a join table (`ledger_entry_links`) for referential integrity.
+
+#### 6.4.9 Mobile client security (documented for Flutter team)
+
+- Store JWT tokens in platform-specific secure storage (iOS Keychain, Android Keystore).
+- Implement certificate pinning for production builds.
+- Delete local audio files immediately after successful upload.
+
+#### 6.4.10 CI/CD security
+
+- Workflow-level permissions default to `contents: read`; only the deploy job gets `contents: write`.
+- `npm audit --audit-level=high` runs as a CI step.
+- Consider enabling Dependabot or equivalent for supply chain monitoring.
+
 ---
 
 ## 7) Database schema (Postgres)

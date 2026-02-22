@@ -2,11 +2,13 @@ import { z } from "zod";
 
 export const CreateOneStudentDataSourceInputSchema = z.object({
   email: z.string().email().optional(),
-  displayName: z.string(),
+  displayName: z.string().min(1).max(500),
 });
 
 export type CreateOneStudentDataSourceInput = z.infer<typeof CreateOneStudentDataSourceInputSchema>;
 
+// Output uses z.unknown() for settings because Prisma returns JsonValue.
+// Strict validation happens in the service/mapper layer.
 export const CreateOneStudentDataSourceOutputSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email().nullable(),

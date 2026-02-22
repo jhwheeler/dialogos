@@ -60,10 +60,22 @@ export class TopicFileService {
       throw ApiError.internal("Storage provider is not configured");
     }
 
-    const safeName = input.originalName.replace(/[/\\]/g, "_");
+    // Sanitize filename: strip path traversal, null bytes, control characters,
+    // and limit length (A4.4)
+    const safeName = input.originalName
+      .replace(/\.\./g, "_")
+      .replace(/[/\\]/g, "_")
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\x00-\x1f\x7f]/g, "")
+      .slice(0, 255);
     const storageKey = `topics/${input.topicId}/files/${crypto.randomUUID()}/${safeName}`;
 
-    const uploadUrl = await this.storage.getPresignedUploadUrl(storageKey, input.mimeType);
+    const uploadUrl = await this.storage.getPresignedUploadUrl(
+      storageKey,
+      input.mimeType,
+      undefined,
+      input.sizeBytes,
+    );
 
     return { uploadUrl, storageKey };
   }

@@ -1,4 +1,6 @@
 import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import sensible from "@fastify/sensible";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
@@ -27,14 +29,36 @@ export function buildApp() {
   const prisma = getPrismaClient();
   const container = createContainer(prisma, env);
 
-  const app = Fastify({ logger: loggerConfig });
+  const app = Fastify({
+    logger: loggerConfig,
+    bodyLimit: 1_048_576, // 1 MB default; routes needing more override per-route
+  });
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
   registerErrorHandler(app);
 
-  app.register(cors, { origin: true });
+  // --- Security: CORS with explicit allowlist (A7.1) ---
+  const corsOrigin = env.CORS_ORIGIN
+    ? env.CORS_ORIGIN.split(",").map((o) => o.trim())
+    : env.NODE_ENV === "production"
+      ? false
+      : true; // permissive only in dev/test
+  app.register(cors, { origin: corsOrigin, credentials: true });
+
+  // --- Security: HTTP headers (A7.2) ---
+  app.register(helmet, {
+    contentSecurityPolicy: false, // API-only, no HTML to protect
+    hsts: { maxAge: 31536000 },
+  });
+
+  // --- Security: Rate limiting (A7.3) ---
+  app.register(rateLimit, {
+    max: 100,
+    timeWindow: "1 minute",
+  });
+
   app.register(sensible);
 
   app.register(swagger, {
@@ -56,7 +80,10 @@ export function buildApp() {
     transform: jsonSchemaTransform,
   });
 
-  app.register(swaggerUi, { routePrefix: "/docs" });
+  // --- Security: Swagger UI restricted to non-production (A3.2) ---
+  if (env.NODE_ENV !== "production") {
+    app.register(swaggerUi, { routePrefix: "/docs" });
+  }
 
   app.register(containerPlugin, { container });
   app.register(authPlugin, { supabaseJwtSecret: env.SUPABASE_JWT_SECRET });

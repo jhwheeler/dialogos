@@ -33,11 +33,13 @@ export class S3Storage implements StorageProvider {
     key: string,
     contentType: string,
     expiresInSeconds = 3600,
+    maxContentLength?: number,
   ): Promise<string> {
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: key,
       ContentType: contentType,
+      ...(maxContentLength !== undefined && { ContentLength: maxContentLength }),
     });
 
     return getSignedUrl(this.client, command, {

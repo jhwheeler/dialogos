@@ -14,6 +14,9 @@ declare module "fastify" {
   }
 }
 
+/** Maximum number of student IDs to cache in memory. */
+const MAX_KNOWN_STUDENTS = 10_000;
+
 const authPlugin: FastifyPluginAsync<{ supabaseJwtSecret: string }> = async (
   fastify: FastifyInstance,
   opts,
@@ -33,7 +36,7 @@ const authPlugin: FastifyPluginAsync<{ supabaseJwtSecret: string }> = async (
     const token = header.slice(7);
 
     try {
-      const { payload } = await jwtVerify(token, secret);
+      const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
       const studentId = payload.sub;
 
       if (!studentId) {
@@ -52,6 +55,12 @@ const authPlugin: FastifyPluginAsync<{ supabaseJwtSecret: string }> = async (
             (payload.email as string) ??
             "",
         });
+
+        // Evict oldest entries if cache is full (A1.2)
+        if (knownStudents.size >= MAX_KNOWN_STUDENTS) {
+          const first = knownStudents.values().next().value;
+          if (first !== undefined) knownStudents.delete(first);
+        }
         knownStudents.add(studentId);
       }
     } catch (error) {

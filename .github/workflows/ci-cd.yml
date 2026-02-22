@@ -7,8 +7,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+# Default to read-only; deploy job overrides (A9.2)
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   lint:
@@ -67,6 +68,25 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies (A9.3)
+        run: npm audit --audit-level=high
 
   test:
     name: Test
@@ -141,8 +161,10 @@ jobs:
 
   deploy:
     name: Deploy Preview
-    needs: [lint, format, typecheck, test, build]
+    needs: [lint, format, typecheck, audit, test, build]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout source
         uses: actions/checkout@v4

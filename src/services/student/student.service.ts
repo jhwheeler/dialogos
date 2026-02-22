@@ -61,8 +61,6 @@ export class StudentService {
       id: input.id,
       displayName: input.displayName,
       settings: input.settings,
-      plan: input.plan,
-      trialRemainingSeconds: input.trialRemainingSeconds,
     });
 
     return StudentMapper.updateOne.output.fromDataSourceToService(updated);

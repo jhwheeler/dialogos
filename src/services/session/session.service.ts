@@ -105,11 +105,7 @@ export class SessionService {
     });
 
     if (!updated) {
-      // Re-read to get current status for the error message
-      const current = await this.sessionDataSource.getOne({ id: input.id });
-      throw new ConflictError(
-        `Cannot start session: current status is '${current?.status ?? "unknown"}', expected 'draft'`,
-      );
+      throw new ConflictError("Cannot start session: invalid current status");
     }
 
     return SessionMapper.startOne.output.fromDataSourceToService(updated);
@@ -126,10 +122,7 @@ export class SessionService {
     });
 
     if (!updated) {
-      const current = await this.sessionDataSource.getOne({ id: input.id });
-      throw new ConflictError(
-        `Cannot end session: current status is '${current?.status ?? "unknown"}', expected 'active'`,
-      );
+      throw new ConflictError("Cannot end session: invalid current status");
     }
 
     return SessionMapper.endOne.output.fromDataSourceToService(updated);
@@ -146,10 +139,7 @@ export class SessionService {
     });
 
     if (!updated) {
-      const current = await this.sessionDataSource.getOne({ id: input.id });
-      throw new ConflictError(
-        `Cannot abort session: current status is '${current?.status ?? "unknown"}', expected 'active'`,
-      );
+      throw new ConflictError("Cannot abort session: invalid current status");
     }
 
     return SessionMapper.abortOne.output.fromDataSourceToService(updated);
