@@ -81,11 +81,11 @@ Acceptance checks:
    - Registered `TurnDataSource` and `TurnService` in `src/lib/container.ts`.
    - **Security: turn index concurrency** — Use atomic `INSERT ... SELECT MAX(index) + 1` or database sequence for turn index assignment. Handle unique constraint violations with a bounded retry (TECH_SPEC Section 6.4.6).
    - **Security: audio upload validation** — Validate audio MIME type on presigned URLs; enforce 10 MB max audio file size (TECH_SPEC Section 6.4.5).
-3. **PR-3 — Async pipeline skeleton (next)**
+3. **PR-3 — Async pipeline skeleton (done ✓)**
    - Add queue abstraction and job contracts for all three spec-defined jobs: `TRANSCRIBE_TURN`, `GENERATE_PROMPT`, and `RENDER_ARTIFACTS` (TECH_SPEC Section 9.2). Wire no-op/mock handlers for each through service orchestration. `RENDER_ARTIFACTS` handler can remain a stub until Phase 2, but the contract must exist.
    - **Security: job queue hardening** — Ensure jobs are authenticated (cannot be enqueued externally), payloads are validated, retry limits are bounded, and results are access-controlled (TECH_SPEC Section 6.4).
    - Turn status read endpoint (`GET /v1/sessions/:sessionId/turns/:turnId`) already exists from PR-2; use it for polling.
-4. **PR-4 — STT integration + prompt generation enforcement loop**
+4. **PR-4 — STT integration + prompt generation enforcement loop (done ✓)**
    - Wire real STT provider into the `TRANSCRIBE_TURN` handler (replace no-op from PR-3). Persist `studentText` on the turn.
    - **Security: prompt injection mitigations** — Wrap student text in delimiter tags; strip control characters; sanitize `extractedText` before prompt inclusion; validate all model output fields against expected enums at persistence layer (TECH_SPEC Section 6.4.4).
    - Implement strict structured output validation pipeline from TECH_SPEC Section 4.3 (schema, word cap, banned phrases, one-sentence check, bounded retries) in the `GENERATE_PROMPT` handler.

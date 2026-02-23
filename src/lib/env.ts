@@ -13,6 +13,9 @@ const EnvSchema = z.object({
   STORAGE_ENDPOINT: z.string().optional(),
   STORAGE_ACCESS_KEY: z.string().optional(),
   STORAGE_SECRET_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+  ANTHROPIC_API_KEY: z.string().optional(),
+  LLM_MODEL: z.string().optional(),
 });
 
 export type AppEnv = z.infer<typeof EnvSchema>;

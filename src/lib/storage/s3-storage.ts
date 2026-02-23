@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { StorageProvider } from "./storage.js";
 
@@ -47,6 +47,17 @@ export class S3Storage implements StorageProvider {
     return getSignedUrl(this.client, command, {
       expiresIn: expiresInSeconds,
     });
+  }
+
+  public async getObject(key: string): Promise<Buffer> {
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+    });
+
+    const response = await this.client.send(command);
+    const byteArray = await response.Body!.transformToByteArray();
+    return Buffer.from(byteArray);
   }
 
   public async deleteObject(key: string): Promise<void> {

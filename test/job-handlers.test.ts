@@ -11,6 +11,9 @@ import { InMemoryJobQueue } from "../src/lib/queue/in-memory-queue.js";
 import { JobType } from "../src/lib/queue/types.js";
 import type { JobPayload } from "../src/lib/queue/types.js";
 import { TurnDataSource } from "../src/data-sources/turn/turn.data-source.js";
+import { SessionDataSource } from "../src/data-sources/session/session.data-source.js";
+import { SourceDataSource } from "../src/data-sources/source/source.data-source.js";
+import { TopicDataSource } from "../src/data-sources/topic/topic.data-source.js";
 import { createTranscribeTurnHandler } from "../src/jobs/handlers/transcribe-turn.handler.js";
 import { createGeneratePromptHandler } from "../src/jobs/handlers/generate-prompt.handler.js";
 import { createRenderArtifactsHandler } from "../src/jobs/handlers/render-artifacts.handler.js";
@@ -23,6 +26,9 @@ function audioKey(filename: string): string {
 describe("Job handlers", () => {
   let prisma: PrismaClient;
   let turnDataSource: TurnDataSource;
+  let sessionDataSource: SessionDataSource;
+  let sourceDataSource: SourceDataSource;
+  let topicDataSource: TopicDataSource;
 
   let studentAId: string;
   let topicAId: string;
@@ -31,6 +37,9 @@ describe("Job handlers", () => {
   beforeAll(async () => {
     prisma = getTestPrismaClient();
     turnDataSource = new TurnDataSource(prisma);
+    sessionDataSource = new SessionDataSource(prisma);
+    sourceDataSource = new SourceDataSource(prisma);
+    topicDataSource = new TopicDataSource(prisma);
 
     const studentA = await prisma.student.create({
       data: { displayName: "Handler Test Student" },
@@ -69,7 +78,7 @@ describe("Job handlers", () => {
   });
 
   describe("TRANSCRIBE_TURN handler", () => {
-    it("updates turn with placeholder studentText", async () => {
+    it("updates turn with placeholder studentText when no STT provider", async () => {
       const turn = await prisma.turn.create({
         data: {
           sessionId: activeSessionId,
@@ -80,7 +89,8 @@ describe("Job handlers", () => {
 
       const queue = new InMemoryJobQueue();
       queue.registerHandler(JobType.GENERATE_PROMPT, async () => {}); // no-op for chain target
-      const handler = createTranscribeTurnHandler(turnDataSource, queue);
+      // Pass null for sttProvider and storageProvider — triggers placeholder path
+      const handler = createTranscribeTurnHandler(turnDataSource, queue, null, null);
 
       await handler({
         jobType: JobType.TRANSCRIBE_TURN,
@@ -101,11 +111,17 @@ describe("Job handlers", () => {
       });
 
       const queue = new InMemoryJobQueue();
-      const generateHandler = createGeneratePromptHandler(turnDataSource);
+      const generateHandler = createGeneratePromptHandler({
+        turnDataSource,
+        sessionDataSource,
+        sourceDataSource,
+        topicDataSource,
+        llmProvider: null,
+      });
       queue.registerHandler(JobType.GENERATE_PROMPT, generateHandler);
       queue.start();
 
-      const handler = createTranscribeTurnHandler(turnDataSource, queue);
+      const handler = createTranscribeTurnHandler(turnDataSource, queue, null, null);
       await handler({
         jobType: JobType.TRANSCRIBE_TURN,
         turnId: turn.id,
@@ -124,7 +140,7 @@ describe("Job handlers", () => {
   });
 
   describe("GENERATE_PROMPT handler", () => {
-    it("updates turn with placeholder assistant fields", async () => {
+    it("updates turn with placeholder assistant fields when no LLM provider", async () => {
       const turn = await prisma.turn.create({
         data: {
           sessionId: activeSessionId,
@@ -134,7 +150,13 @@ describe("Job handlers", () => {
         },
       });
 
-      const handler = createGeneratePromptHandler(turnDataSource);
+      const handler = createGeneratePromptHandler({
+        turnDataSource,
+        sessionDataSource,
+        sourceDataSource,
+        topicDataSource,
+        llmProvider: null,
+      });
       await handler({
         jobType: JobType.GENERATE_PROMPT,
         turnId: turn.id,
@@ -145,6 +167,183 @@ describe("Job handlers", () => {
       expect(updated?.assistantPromptType).toBe("clarify");
       expect(updated?.assistantDetectedIssue).toBe("none");
       expect(updated?.latencyMs).toBe(0);
+    });
+
+    it("collects context and calls LLM when provider is available", async () => {
+      const turn = await prisma.turn.create({
+        data: {
+          sessionId: activeSessionId,
+          index: 0,
+          studentAudioKey: audioKey("test.webm"),
+          studentText: "Justice is giving each person what they deserve.",
+        },
+      });
+
+      // Mock LLM provider that returns a valid Socratic output
+      const mockLlm = {
+        generateSocraticResponse: async () => ({
+          next_prompt: "Define deserve.",
+          prompt_type: "define" as const,
+          detected_issue: "vague_term" as const,
+          stop_reason: "needs_definition" as const,
+        }),
+      };
+
+      const handler = createGeneratePromptHandler({
+        turnDataSource,
+        sessionDataSource,
+        sourceDataSource,
+        topicDataSource,
+        llmProvider: mockLlm,
+      });
+      await handler({
+        jobType: JobType.GENERATE_PROMPT,
+        turnId: turn.id,
+      });
+
+      const updated = await prisma.turn.findUnique({ where: { id: turn.id } });
+      expect(updated?.assistantText).toBe("Define deserve.");
+      expect(updated?.assistantPromptType).toBe("define");
+      expect(updated?.assistantDetectedIssue).toBe("vague_term");
+      expect(updated?.latencyMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it("retries on enforcement violation and persists valid response", async () => {
+      const turn = await prisma.turn.create({
+        data: {
+          sessionId: activeSessionId,
+          index: 0,
+          studentAudioKey: audioKey("test.webm"),
+          studentText: "Justice is fairness.",
+        },
+      });
+
+      let callCount = 0;
+      const mockLlm = {
+        generateSocraticResponse: async () => {
+          callCount++;
+          if (callCount === 1) {
+            // First call: return too many words (will fail word cap)
+            return {
+              next_prompt:
+                "That is a very interesting claim but you need to define what you mean by fairness precisely.",
+              prompt_type: "define" as const,
+              detected_issue: "vague_term" as const,
+              stop_reason: "needs_definition" as const,
+            };
+          }
+          // Second call: valid response
+          return {
+            next_prompt: "Define fairness.",
+            prompt_type: "define" as const,
+            detected_issue: "vague_term" as const,
+            stop_reason: "needs_definition" as const,
+          };
+        },
+      };
+
+      const handler = createGeneratePromptHandler({
+        turnDataSource,
+        sessionDataSource,
+        sourceDataSource,
+        topicDataSource,
+        llmProvider: mockLlm,
+      });
+      await handler({
+        jobType: JobType.GENERATE_PROMPT,
+        turnId: turn.id,
+      });
+
+      expect(callCount).toBe(2);
+      const updated = await prisma.turn.findUnique({ where: { id: turn.id } });
+      expect(updated?.assistantText).toBe("Define fairness.");
+    });
+
+    it("falls back gracefully after all retries exhausted", async () => {
+      const turn = await prisma.turn.create({
+        data: {
+          sessionId: activeSessionId,
+          index: 0,
+          studentAudioKey: audioKey("test.webm"),
+          studentText: "Justice is fairness.",
+        },
+      });
+
+      // Mock LLM that always returns invalid output (too many words)
+      const mockLlm = {
+        generateSocraticResponse: async () => ({
+          next_prompt:
+            "This is way too long of a prompt and will never pass the word cap enforcement check at all.",
+          prompt_type: "define" as const,
+          detected_issue: "vague_term" as const,
+          stop_reason: "needs_definition" as const,
+        }),
+      };
+
+      const handler = createGeneratePromptHandler({
+        turnDataSource,
+        sessionDataSource,
+        sourceDataSource,
+        topicDataSource,
+        llmProvider: mockLlm,
+      });
+      await handler({
+        jobType: JobType.GENERATE_PROMPT,
+        turnId: turn.id,
+      });
+
+      const updated = await prisma.turn.findUnique({ where: { id: turn.id } });
+      // Should fallback to a graceful error message
+      expect(updated?.assistantText).toBe("I need a moment. Could you rephrase that?");
+      expect(updated?.assistantPromptType).toBe("clarify");
+    });
+
+    it("rejects banned phrases and retries", async () => {
+      const turn = await prisma.turn.create({
+        data: {
+          sessionId: activeSessionId,
+          index: 0,
+          studentAudioKey: audioKey("test.webm"),
+          studentText: "Justice is fairness.",
+        },
+      });
+
+      let callCount = 0;
+      const mockLlm = {
+        generateSocraticResponse: async () => {
+          callCount++;
+          if (callCount === 1) {
+            return {
+              next_prompt: "Great, now define it.",
+              prompt_type: "define" as const,
+              detected_issue: "vague_term" as const,
+              stop_reason: "needs_definition" as const,
+            };
+          }
+          return {
+            next_prompt: "Define fairness precisely.",
+            prompt_type: "define" as const,
+            detected_issue: "vague_term" as const,
+            stop_reason: "needs_definition" as const,
+          };
+        },
+      };
+
+      const handler = createGeneratePromptHandler({
+        turnDataSource,
+        sessionDataSource,
+        sourceDataSource,
+        topicDataSource,
+        llmProvider: mockLlm,
+      });
+      await handler({
+        jobType: JobType.GENERATE_PROMPT,
+        turnId: turn.id,
+      });
+
+      expect(callCount).toBe(2);
+      const updated = await prisma.turn.findUnique({ where: { id: turn.id } });
+      expect(updated?.assistantText).toBe("Define fairness precisely.");
     });
   });
 
@@ -164,7 +363,7 @@ describe("Job handlers", () => {
     it("TRANSCRIBE_TURN rejects invalid payload", async () => {
       const queue = new InMemoryJobQueue();
       queue.registerHandler(JobType.GENERATE_PROMPT, async () => {});
-      const handler = createTranscribeTurnHandler(turnDataSource, queue);
+      const handler = createTranscribeTurnHandler(turnDataSource, queue, null, null);
 
       await expect(
         handler({ jobType: JobType.GENERATE_PROMPT, turnId: "some-id" } as unknown as JobPayload),
@@ -172,7 +371,13 @@ describe("Job handlers", () => {
     });
 
     it("GENERATE_PROMPT rejects invalid payload", async () => {
-      const handler = createGeneratePromptHandler(turnDataSource);
+      const handler = createGeneratePromptHandler({
+        turnDataSource,
+        sessionDataSource,
+        sourceDataSource,
+        topicDataSource,
+        llmProvider: null,
+      });
 
       await expect(
         handler({

@@ -5,6 +5,10 @@ import type { StorageProvider } from "./storage/index.js";
 import { InMemoryJobQueue } from "./queue/index.js";
 import { JobType } from "./queue/types.js";
 import type { JobQueue } from "./queue/job-queue.js";
+import { OpenAiStt } from "./stt/index.js";
+import type { SttProvider } from "./stt/index.js";
+import { AnthropicLlm } from "./llm/index.js";
+import type { LlmProvider } from "./llm/index.js";
 import { StudentDataSource } from "../data-sources/student/student.data-source.js";
 import { StudentService } from "../services/student/student.service.js";
 import { TopicDataSource } from "../data-sources/topic/topic.data-source.js";
@@ -77,23 +81,46 @@ export function createContainer(prisma: PrismaClient, env: AppEnv): AppContainer
   dataSources.source = sourceDataSource;
   services.source = sourceService;
 
+  // ─── External providers (optional — graceful fallback if not configured) ──
+  let sttProvider: SttProvider | null = null;
+  if (env.OPENAI_API_KEY) {
+    sttProvider = new OpenAiStt({ apiKey: env.OPENAI_API_KEY });
+  }
+
+  let llmProvider: LlmProvider | null = null;
+  if (env.ANTHROPIC_API_KEY) {
+    llmProvider = new AnthropicLlm({
+      apiKey: env.ANTHROPIC_API_KEY,
+      model: env.LLM_MODEL,
+    });
+  }
+
   // ─── Job queue ────────────────────────────────────────────────
   const jobQueue = new InMemoryJobQueue({ maxRetries: 3 });
 
   const turnDataSource = new TurnDataSource(prisma);
+  const sessionDataSource = new SessionDataSource(prisma);
 
   // Register handlers before starting the queue
   jobQueue.registerHandler(
     JobType.TRANSCRIBE_TURN,
-    createTranscribeTurnHandler(turnDataSource, jobQueue),
+    createTranscribeTurnHandler(turnDataSource, jobQueue, sttProvider, storage),
   );
-  jobQueue.registerHandler(JobType.GENERATE_PROMPT, createGeneratePromptHandler(turnDataSource));
+  jobQueue.registerHandler(
+    JobType.GENERATE_PROMPT,
+    createGeneratePromptHandler({
+      turnDataSource,
+      sessionDataSource,
+      sourceDataSource,
+      topicDataSource,
+      llmProvider,
+    }),
+  );
   jobQueue.registerHandler(JobType.RENDER_ARTIFACTS, createRenderArtifactsHandler());
 
   jobQueue.start();
 
   // ─── Services that depend on the queue ────────────────────────
-  const sessionDataSource = new SessionDataSource(prisma);
   const sessionService = new SessionService(
     sessionDataSource,
     topicDataSource,
