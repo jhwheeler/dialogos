@@ -17,6 +17,7 @@ import { SourceDataSource } from "../src/data-sources/source/source.data-source.
 import { createTranscribeTurnHandler } from "../src/jobs/handlers/transcribe-turn.handler.js";
 import { createGeneratePromptHandler } from "../src/jobs/handlers/generate-prompt.handler.js";
 import { createRenderArtifactsHandler } from "../src/jobs/handlers/render-artifacts.handler.js";
+import { PromptGenerationService } from "../src/services/prompt-generation/prompt-generation.service.js";
 import type { LlmProvider } from "../src/lib/providers/llm-provider.js";
 import type { SocraticOutput, PromptContext } from "../src/lib/providers/llm-provider.js";
 import type { SttProvider } from "../src/lib/providers/stt-provider.js";
@@ -232,13 +233,14 @@ describe("Job handlers", () => {
       });
 
       const llm = createMockLlmProvider(VALID_LLM_OUTPUT);
-      const handler = createGeneratePromptHandler(
+      const promptService = new PromptGenerationService(
         turnDataSource,
         sessionDataSource,
         topicDataSource,
         sourceDataSource,
         llm,
       );
+      const handler = createGeneratePromptHandler(turnDataSource, promptService);
 
       await handler({
         jobType: JobType.GENERATE_PROMPT,
@@ -263,13 +265,14 @@ describe("Job handlers", () => {
       });
 
       const llm = createMockLlmProvider(VALID_LLM_OUTPUT);
-      const handler = createGeneratePromptHandler(
+      const promptService = new PromptGenerationService(
         turnDataSource,
         sessionDataSource,
         topicDataSource,
         sourceDataSource,
         llm,
       );
+      const handler = createGeneratePromptHandler(turnDataSource, promptService);
 
       await handler({
         jobType: JobType.GENERATE_PROMPT,
@@ -298,15 +301,16 @@ describe("Job handlers", () => {
         JobType.TRANSCRIBE_TURN,
         createTranscribeTurnHandler(turnDataSource, queue, stt, storage),
       );
+      const promptService = new PromptGenerationService(
+        turnDataSource,
+        sessionDataSource,
+        topicDataSource,
+        sourceDataSource,
+        llm,
+      );
       queue.registerHandler(
         JobType.GENERATE_PROMPT,
-        createGeneratePromptHandler(
-          turnDataSource,
-          sessionDataSource,
-          topicDataSource,
-          sourceDataSource,
-          llm,
-        ),
+        createGeneratePromptHandler(turnDataSource, promptService),
       );
       queue.start();
 

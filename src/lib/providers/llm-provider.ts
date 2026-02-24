@@ -11,8 +11,6 @@ export interface PromptContext {
 export interface ConversationTurn {
   role: "student" | "assistant";
   text: string;
-  promptType?: string;
-  detectedIssue?: string;
 }
 
 export interface SocraticOutput {

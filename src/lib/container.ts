@@ -18,6 +18,7 @@ import { SessionDataSource } from "../data-sources/session/session.data-source.j
 import { SessionService } from "../services/session/session.service.js";
 import { TurnDataSource } from "../data-sources/turn/turn.data-source.js";
 import { TurnService } from "../services/turn/turn.service.js";
+import { PromptGenerationService } from "../services/prompt-generation/prompt-generation.service.js";
 import {
   createTranscribeTurnHandler,
   createGeneratePromptHandler,
@@ -86,6 +87,17 @@ export function createContainer(prisma: PrismaClient, env: AppEnv): AppContainer
   const sttProvider = createSttProvider(env);
   const llmProvider = createLlmProvider(env);
 
+  // ─── Prompt generation service ─────────────────────────────
+  const promptGenerationService = llmProvider
+    ? new PromptGenerationService(
+        turnDataSource,
+        sessionDataSource,
+        topicDataSource,
+        sourceDataSource,
+        llmProvider,
+      )
+    : null;
+
   // ─── Job queue ────────────────────────────────────────────────
   const jobQueue = new InMemoryJobQueue({ maxRetries: 3 });
 
@@ -96,13 +108,7 @@ export function createContainer(prisma: PrismaClient, env: AppEnv): AppContainer
   );
   jobQueue.registerHandler(
     JobType.GENERATE_PROMPT,
-    createGeneratePromptHandler(
-      turnDataSource,
-      sessionDataSource,
-      topicDataSource,
-      sourceDataSource,
-      llmProvider,
-    ),
+    createGeneratePromptHandler(turnDataSource, promptGenerationService),
   );
   jobQueue.registerHandler(JobType.RENDER_ARTIFACTS, createRenderArtifactsHandler());
 

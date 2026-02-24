@@ -4,6 +4,7 @@ import type { JobHandler, JobPayload } from "../../lib/queue/types.js";
 import { JobType, TranscribeTurnPayloadSchema } from "../../lib/queue/types.js";
 import type { SttProvider } from "../../lib/providers/stt-provider.js";
 import type { StorageProvider } from "../../lib/storage/storage.js";
+import { NotFoundError } from "../../errors/not-found-error.js";
 
 /** Strip control characters (keep newlines and tabs). */
 function sanitizeTranscription(text: string): string {
@@ -38,7 +39,7 @@ export function createTranscribeTurnHandler(
 
     const turn = await turnDataSource.getOne({ id: parsed.turnId });
     if (!turn) {
-      throw new Error(`Turn not found: ${parsed.turnId}`);
+      throw new NotFoundError(`Turn not found: ${parsed.turnId}`);
     }
 
     let studentText: string;

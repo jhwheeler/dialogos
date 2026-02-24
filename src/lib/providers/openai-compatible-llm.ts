@@ -1,5 +1,10 @@
 import OpenAI from "openai";
 import type { LlmProvider, PromptContext, SocraticOutput } from "./llm-provider.js";
+import {
+  PROMPT_TYPE_VALUES,
+  DETECTED_ISSUE_VALUES,
+  STOP_REASON_VALUES,
+} from "../socratic/types.js";
 
 export interface OpenAiCompatibleLlmConfig {
   apiKey: string;
@@ -18,50 +23,15 @@ const JSON_SCHEMA = {
       next_prompt: { type: "string" as const },
       prompt_type: {
         type: "string" as const,
-        enum: [
-          "define",
-          "distinguish",
-          "premise",
-          "inference",
-          "objection",
-          "compress",
-          "clarify",
-          "example",
-          "scope",
-          "contradiction",
-          "locate_passage",
-          "reconcile",
-          "redirect_to_student",
-          "scaffold",
-        ],
+        enum: [...PROMPT_TYPE_VALUES],
       },
       detected_issue: {
         type: "string" as const,
-        enum: [
-          "vague_term",
-          "missing_premise",
-          "equivocation",
-          "drift",
-          "contradiction",
-          "unclear_referent",
-          "unsupported_claim",
-          "unsupported_by_source",
-          "contradicts_source",
-          "misattribution",
-          "content_request",
-          "none",
-        ],
+        enum: [...DETECTED_ISSUE_VALUES],
       },
       stop_reason: {
         type: "string" as const,
-        enum: [
-          "needs_definition",
-          "needs_example",
-          "needs_premise",
-          "needs_scope",
-          "needs_source_evidence",
-          "ok_continue",
-        ],
+        enum: [...STOP_REASON_VALUES],
       },
     },
     required: ["next_prompt", "prompt_type", "detected_issue", "stop_reason"],
@@ -74,9 +44,9 @@ const JSON_FALLBACK_INSTRUCTION = `
 You MUST respond with valid JSON matching this exact schema:
 {
   "next_prompt": "<your one-sentence prompt, <= 12 words>",
-  "prompt_type": "<one of: define, distinguish, premise, inference, objection, compress, clarify, example, scope, contradiction, locate_passage, reconcile, redirect_to_student, scaffold>",
-  "detected_issue": "<one of: vague_term, missing_premise, equivocation, drift, contradiction, unclear_referent, unsupported_claim, unsupported_by_source, contradicts_source, misattribution, content_request, none>",
-  "stop_reason": "<one of: needs_definition, needs_example, needs_premise, needs_scope, needs_source_evidence, ok_continue>"
+  "prompt_type": "<one of: ${PROMPT_TYPE_VALUES.join(", ")}>",
+  "detected_issue": "<one of: ${DETECTED_ISSUE_VALUES.join(", ")}>",
+  "stop_reason": "<one of: ${STOP_REASON_VALUES.join(", ")}>"
 }
 Respond with ONLY the JSON object. No other text.`;
 

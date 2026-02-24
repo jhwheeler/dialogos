@@ -15,14 +15,14 @@ const EnvSchema = z.object({
   STORAGE_SECRET_KEY: z.string().optional(),
 
   // ─── Provider configuration ─────────────────────────────────
-  LLM_PROVIDER: z.enum(["anthropic", "openai"]).default("anthropic").optional(),
+  LLM_PROVIDER: z.enum(["anthropic", "openai"]).optional().default("anthropic"),
   ANTHROPIC_API_KEY: z.string().optional(),
-  ANTHROPIC_MODEL: z.string().default("claude-sonnet-4-20250514").optional(),
+  ANTHROPIC_MODEL: z.string().optional().default("claude-sonnet-4-20250514"),
   OPENAI_API_KEY: z.string().optional(),
-  OPENAI_MODEL: z.string().default("gpt-4o-mini").optional(),
+  OPENAI_MODEL: z.string().optional().default("gpt-4o-mini"),
   OPENAI_BASE_URL: z.string().url().optional(),
-  STT_PROVIDER: z.enum(["openai-whisper"]).default("openai-whisper").optional(),
-  STT_MODEL: z.string().default("whisper-1").optional(),
+  STT_PROVIDER: z.enum(["openai-whisper"]).optional().default("openai-whisper"),
+  STT_MODEL: z.string().optional().default("whisper-1"),
   STT_BASE_URL: z.string().url().optional(),
 });
 

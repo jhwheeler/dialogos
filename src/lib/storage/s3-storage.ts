@@ -71,6 +71,9 @@ export class S3Storage implements StorageProvider {
     });
 
     const response = await this.client.send(command);
+    if (!response.Body) {
+      throw new Error(`S3 object not found or empty: ${key}`);
+    }
     const stream = response.Body as Readable;
 
     const chunks: Buffer[] = [];

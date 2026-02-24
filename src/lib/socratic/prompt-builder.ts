@@ -28,12 +28,10 @@ export interface PromptBuilderInput {
 export interface PriorTurn {
   studentText: string | null;
   assistantText: string | null;
-  assistantPromptType: string | null;
-  assistantDetectedIssue: string | null;
 }
 
 const MAX_STUDENT_TEXT_LENGTH = 2000;
-const MAX_EXTRACTED_TEXT_LENGTH = 16000;
+const MAX_EXTRACTED_TEXT_LENGTH = 8000;
 
 /** Strip control characters (keep newlines and tabs). */
 function sanitizeText(text: string): string {
@@ -53,8 +51,6 @@ export function buildPromptContext(input: PromptBuilderInput): PromptContext {
       conversationHistory.push({
         role: "student",
         text: `<student_speech>${sanitizeText(turn.studentText)}</student_speech>`,
-        ...(turn.assistantPromptType && { promptType: turn.assistantPromptType }),
-        ...(turn.assistantDetectedIssue && { detectedIssue: turn.assistantDetectedIssue }),
       });
     }
     if (turn.assistantText) {

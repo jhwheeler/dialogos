@@ -1,6 +1,7 @@
 import type { LlmProvider } from "../providers/llm-provider.js";
 import type { PromptContext, SocraticOutput } from "../providers/llm-provider.js";
 import { SocraticOutputSchema } from "./types.js";
+import type { SocraticOutputValidated } from "./types.js";
 
 export interface EnforcementConfig {
   maxRetries?: number;
@@ -34,7 +35,7 @@ export async function runEnforcementLoop(
   llmProvider: LlmProvider,
   context: PromptContext,
   config?: EnforcementConfig,
-): Promise<SocraticOutput> {
+): Promise<SocraticOutputValidated> {
   const maxRetries = config?.maxRetries ?? DEFAULT_MAX_RETRIES;
   const wordCap = config?.wordCap ?? DEFAULT_WORD_CAP;
   const totalAttempts = maxRetries + 1;
@@ -104,7 +105,8 @@ function countWords(text: string): number {
 function findBannedPhrase(text: string): string | null {
   const lower = text.toLowerCase();
   for (const phrase of BANNED_PHRASES) {
-    if (lower.includes(phrase)) {
+    const pattern = new RegExp(`\\b${phrase.replace(/\s+/g, "\\s+")}\\b`);
+    if (pattern.test(lower)) {
       return phrase;
     }
   }

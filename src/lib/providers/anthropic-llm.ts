@@ -1,5 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { LlmProvider, PromptContext, SocraticOutput } from "./llm-provider.js";
+import {
+  PROMPT_TYPE_VALUES,
+  DETECTED_ISSUE_VALUES,
+  STOP_REASON_VALUES,
+} from "../socratic/types.js";
 
 export interface AnthropicLlmConfig {
   apiKey: string;
@@ -22,52 +27,17 @@ const SOCRATIC_RESPONSE_TOOL = {
       },
       prompt_type: {
         type: "string" as const,
-        enum: [
-          "define",
-          "distinguish",
-          "premise",
-          "inference",
-          "objection",
-          "compress",
-          "clarify",
-          "example",
-          "scope",
-          "contradiction",
-          "locate_passage",
-          "reconcile",
-          "redirect_to_student",
-          "scaffold",
-        ],
+        enum: [...PROMPT_TYPE_VALUES],
         description: "The type of Socratic move being made.",
       },
       detected_issue: {
         type: "string" as const,
-        enum: [
-          "vague_term",
-          "missing_premise",
-          "equivocation",
-          "drift",
-          "contradiction",
-          "unclear_referent",
-          "unsupported_claim",
-          "unsupported_by_source",
-          "contradicts_source",
-          "misattribution",
-          "content_request",
-          "none",
-        ],
+        enum: [...DETECTED_ISSUE_VALUES],
         description: "The issue detected in the student's speech, or 'none'.",
       },
       stop_reason: {
         type: "string" as const,
-        enum: [
-          "needs_definition",
-          "needs_example",
-          "needs_premise",
-          "needs_scope",
-          "needs_source_evidence",
-          "ok_continue",
-        ],
+        enum: [...STOP_REASON_VALUES],
         description: "Why the conversation is pausing at this point.",
       },
     },
