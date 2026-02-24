@@ -108,9 +108,10 @@ function buildSourceAnchoring(config: SystemPromptConfig): string {
   parts.push(`Grounding tier: ${config.groundingTier}`);
 
   if (config.groundingTier === 1 && config.sourceExtractedText) {
-    const truncated = config.sourceExtractedText.slice(0, MAX_EXTRACTED_TEXT_LENGTH);
-    const suffix =
-      config.sourceExtractedText.length > MAX_EXTRACTED_TEXT_LENGTH ? "\n[...truncated]" : "";
+    // Strip XML-like tags to prevent delimiter breakout
+    const cleaned = config.sourceExtractedText.replace(/<\/?[a-zA-Z_][\w.-]*>/g, "");
+    const truncated = cleaned.slice(0, MAX_EXTRACTED_TEXT_LENGTH);
+    const suffix = cleaned.length > MAX_EXTRACTED_TEXT_LENGTH ? "\n[...truncated]" : "";
     parts.push(`SOURCE TEXT:\n<source_text>\n${truncated}${suffix}\n</source_text>`);
   }
 

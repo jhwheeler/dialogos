@@ -64,6 +64,9 @@ export class S3Storage implements StorageProvider {
     await this.client.send(command);
   }
 
+  /** Max download size (50 MB) to prevent out-of-memory on unexpectedly large objects. */
+  private static readonly MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024;
+
   public async getObject(key: string): Promise<Buffer> {
     const command = new GetObjectCommand({
       Bucket: this.bucket,
@@ -77,7 +80,15 @@ export class S3Storage implements StorageProvider {
     const stream = response.Body as Readable;
 
     const chunks: Buffer[] = [];
+    let totalBytes = 0;
     for await (const chunk of stream) {
+      totalBytes += (chunk as Uint8Array).length;
+      if (totalBytes > S3Storage.MAX_DOWNLOAD_BYTES) {
+        stream.destroy();
+        throw new Error(
+          `S3 object exceeds maximum download size (${S3Storage.MAX_DOWNLOAD_BYTES} bytes): ${key}`,
+        );
+      }
       chunks.push(Buffer.from(chunk as Uint8Array));
     }
     return Buffer.concat(chunks);

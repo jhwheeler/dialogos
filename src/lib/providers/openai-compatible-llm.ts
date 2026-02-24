@@ -133,13 +133,18 @@ export class OpenAiCompatibleLlm implements LlmProvider {
       throw new Error("OpenAI response did not contain message content");
     }
 
-    const parsed = JSON.parse(content) as Record<string, string>;
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(content) as Record<string, unknown>;
+    } catch {
+      throw new Error("OpenAI response contained invalid JSON");
+    }
 
     return {
-      nextPrompt: parsed.next_prompt,
-      promptType: parsed.prompt_type,
-      detectedIssue: parsed.detected_issue,
-      stopReason: parsed.stop_reason,
+      nextPrompt: String(parsed.next_prompt ?? ""),
+      promptType: String(parsed.prompt_type ?? ""),
+      detectedIssue: String(parsed.detected_issue ?? ""),
+      stopReason: String(parsed.stop_reason ?? ""),
     };
   }
 }

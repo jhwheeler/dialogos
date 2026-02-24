@@ -102,10 +102,16 @@ function countWords(text: string): number {
     .filter((w) => w.length > 0).length;
 }
 
+/** Escape special regex characters in a string. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function findBannedPhrase(text: string): string | null {
   const lower = text.toLowerCase();
   for (const phrase of BANNED_PHRASES) {
-    const pattern = new RegExp(`\\b${phrase.replace(/\s+/g, "\\s+")}\\b`);
+    const escaped = escapeRegExp(phrase).replace(/\s+/g, "\\s+");
+    const pattern = new RegExp(`\\b${escaped}\\b`);
     if (pattern.test(lower)) {
       return phrase;
     }
