@@ -8,7 +8,6 @@ export interface SystemPromptConfig {
   topicDescription?: string;
 }
 
-const MAX_EXTRACTED_TEXT_LENGTH = 8000;
 
 export function buildSystemPrompt(config: SystemPromptConfig): string {
   const parts: string[] = [];
@@ -108,11 +107,8 @@ function buildSourceAnchoring(config: SystemPromptConfig): string {
   parts.push(`Grounding tier: ${config.groundingTier}`);
 
   if (config.groundingTier === 1 && config.sourceExtractedText) {
-    // Strip XML-like tags to prevent delimiter breakout
-    const cleaned = config.sourceExtractedText.replace(/<\/?[a-zA-Z_][\w.-]*>/g, "");
-    const truncated = cleaned.slice(0, MAX_EXTRACTED_TEXT_LENGTH);
-    const suffix = cleaned.length > MAX_EXTRACTED_TEXT_LENGTH ? "\n[...truncated]" : "";
-    parts.push(`SOURCE TEXT:\n<source_text>\n${truncated}${suffix}\n</source_text>`);
+    // Text is already sanitized (angle brackets escaped) and truncated by buildPromptContext
+    parts.push(`SOURCE TEXT:\n<source_text>\n${config.sourceExtractedText}\n</source_text>`);
   }
 
   parts.push(`When the session has source material, enforce these rules:
