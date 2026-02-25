@@ -37,11 +37,12 @@ const MAX_PRIOR_TURN_TEXT_LENGTH = 2000;
 /** Strip control characters (keep newlines and tabs) and XML-like delimiter tags
  *  to prevent prompt injection via tag breakout. */
 function sanitizeText(text: string): string {
-   
-  return text
-    // eslint-disable-next-line no-control-regex -- intentional: strip dangerous control chars for prompt injection prevention
-    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "")
-    .replace(/<\/?[a-zA-Z_][\w.-]*>/g, "");
+  return (
+    text
+      // eslint-disable-next-line no-control-regex -- intentional: strip dangerous control chars for prompt injection prevention
+      .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "")
+      .replace(/<\/?[a-zA-Z_][\w.-]*>/g, "")
+  );
 }
 
 export function buildPromptContext(input: PromptBuilderInput): PromptContext {
