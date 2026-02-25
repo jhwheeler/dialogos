@@ -3,16 +3,19 @@ import { Prisma } from "@prisma/client";
 import { NotFoundError } from "../../errors/not-found-error.js";
 import { ConflictError } from "../../errors/conflict-error.js";
 import { ApiError } from "../../errors/api-error.js";
+import { JobType } from "../../lib/queue/types.js";
 import { TurnMapper } from "../../mappers/turn.mapper.js";
 const MAX_INDEX_RETRIES = 3;
 export class TurnService {
     turnDataSource;
     sessionDataSource;
     storage;
-    constructor(turnDataSource, sessionDataSource, storage) {
+    jobQueue;
+    constructor(turnDataSource, sessionDataSource, storage, jobQueue) {
         this.turnDataSource = turnDataSource;
         this.sessionDataSource = sessionDataSource;
         this.storage = storage;
+        this.jobQueue = jobQueue;
     }
     async verifySessionOwnership(sessionId, studentId) {
         const session = await this.sessionDataSource.getOne({ id: sessionId });
@@ -61,6 +64,16 @@ export class TurnService {
                     index,
                     studentAudioKey: input.studentAudioKey,
                 });
+                // Best-effort: enqueue async transcription pipeline
+                try {
+                    await this.jobQueue.enqueue({
+                        jobType: JobType.TRANSCRIBE_TURN,
+                        turnId: turn.id,
+                    });
+                }
+                catch (enqueueError) {
+                    console.error("Failed to enqueue TRANSCRIBE_TURN job for turn %s:", turn.id, enqueueError);
+                }
                 return TurnMapper.createOne.output.fromDataSourceToService(turn);
             }
             catch (error) {

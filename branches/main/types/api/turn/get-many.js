@@ -3,7 +3,7 @@ export const GetManyTurnApiParamsSchema = z.object({
     sessionId: z.string().uuid(),
 });
 export const GetManyTurnApiOutputSchema = z.object({
-    turns: z.array(z.object({
+    items: z.array(z.object({
         id: z.string().uuid(),
         sessionId: z.string().uuid(),
         index: z.number().int(),
@@ -15,4 +15,5 @@ export const GetManyTurnApiOutputSchema = z.object({
         latencyMs: z.number().int().nullable(),
         createdAt: z.string().datetime(),
     })),
+    count: z.number().int(),
 });

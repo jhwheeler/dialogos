@@ -6,6 +6,6 @@ export const GetManyTopicServiceOutputSchema = z.array(z.object({
     id: z.string().uuid(),
     title: z.string(),
     description: z.string().nullable(),
-    createdAt: z.coerce.date(),
-    updatedAt: z.coerce.date(),
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
 }));

@@ -6,7 +6,7 @@ function topicFileFromDataSourceToService(input) {
         originalName: input.originalName,
         mimeType: input.mimeType,
         sizeBytes: Number(input.sizeBytes),
-        createdAt: input.createdAt,
+        createdAt: input.createdAt.toISOString(),
     };
 }
 export class TopicFileMapper {

@@ -3,8 +3,8 @@ function topicFromDataSourceToService(input) {
         id: input.id,
         title: input.title,
         description: input.description,
-        createdAt: input.createdAt,
-        updatedAt: input.updatedAt,
+        createdAt: input.createdAt.toISOString(),
+        updatedAt: input.updatedAt.toISOString(),
     };
 }
 export class TopicMapper {

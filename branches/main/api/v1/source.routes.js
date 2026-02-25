@@ -16,12 +16,7 @@ export const sourceRoutes = async (fastify) => {
             topicId: request.params.topicId,
             studentId: request.studentId,
         });
-        return reply.send({
-            sources: serviceOutput.map((source) => ({
-                ...source,
-                createdAt: source.createdAt.toISOString(),
-            })),
-        });
+        return reply.send({ items: serviceOutput, count: serviceOutput.length });
     });
     // POST /topics/:topicId/sources — create a new source
     app.post("/topics/:topicId/sources", {
@@ -39,10 +34,7 @@ export const sourceRoutes = async (fastify) => {
             studentId: request.studentId,
             ...request.body,
         });
-        return reply.status(201).send({
-            ...serviceOutput,
-            createdAt: serviceOutput.createdAt.toISOString(),
-        });
+        return reply.status(201).send(serviceOutput);
     });
     // GET /topics/:topicId/sources/:sourceId — get one source
     app.get("/topics/:topicId/sources/:sourceId", {
@@ -58,10 +50,7 @@ export const sourceRoutes = async (fastify) => {
             id: request.params.sourceId,
             studentId: request.studentId,
         });
-        return reply.send({
-            ...serviceOutput,
-            createdAt: serviceOutput.createdAt.toISOString(),
-        });
+        return reply.send(serviceOutput);
     });
     // PATCH /topics/:topicId/sources/:sourceId — update a source
     app.patch("/topics/:topicId/sources/:sourceId", {
@@ -79,10 +68,7 @@ export const sourceRoutes = async (fastify) => {
             studentId: request.studentId,
             ...request.body,
         });
-        return reply.send({
-            ...serviceOutput,
-            createdAt: serviceOutput.createdAt.toISOString(),
-        });
+        return reply.send(serviceOutput);
     });
     // DELETE /topics/:topicId/sources/:sourceId — soft-delete
     app.delete("/topics/:topicId/sources/:sourceId", {

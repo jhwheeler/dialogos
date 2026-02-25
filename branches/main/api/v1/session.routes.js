@@ -1,11 +1,4 @@
 import { GetOneSessionApiParamsSchema, GetOneSessionApiOutputSchema, GetManySessionApiParamsSchema, GetManySessionApiOutputSchema, CreateOneSessionApiParamsSchema, CreateOneSessionApiBodySchema, CreateOneSessionApiOutputSchema, SessionTransitionApiParamsSchema, SessionTransitionApiOutputSchema, DeleteOneSessionApiParamsSchema, DeleteOneSessionApiOutputSchema, } from "../../types/api/session/index.js";
-function formatSessionDates(session) {
-    return {
-        startedAt: session.startedAt?.toISOString() ?? null,
-        endedAt: session.endedAt?.toISOString() ?? null,
-        createdAt: session.createdAt.toISOString(),
-    };
-}
 export const sessionRoutes = async (fastify) => {
     const app = fastify.withTypeProvider();
     const sessionService = fastify.container.services.session;
@@ -23,12 +16,7 @@ export const sessionRoutes = async (fastify) => {
             topicId: request.params.topicId,
             studentId: request.studentId,
         });
-        return reply.send({
-            sessions: serviceOutput.map((session) => ({
-                ...session,
-                ...formatSessionDates(session),
-            })),
-        });
+        return reply.send({ items: serviceOutput, count: serviceOutput.length });
     });
     // POST /topics/:topicId/sessions — create a new draft session
     app.post("/topics/:topicId/sessions", {
@@ -46,10 +34,7 @@ export const sessionRoutes = async (fastify) => {
             studentId: request.studentId,
             ...request.body,
         });
-        return reply.status(201).send({
-            ...serviceOutput,
-            ...formatSessionDates(serviceOutput),
-        });
+        return reply.status(201).send(serviceOutput);
     });
     // GET /sessions/:sessionId — get single session
     app.get("/sessions/:sessionId", {
@@ -65,10 +50,7 @@ export const sessionRoutes = async (fastify) => {
             id: request.params.sessionId,
             studentId: request.studentId,
         });
-        return reply.send({
-            ...serviceOutput,
-            ...formatSessionDates(serviceOutput),
-        });
+        return reply.send(serviceOutput);
     });
     // POST /sessions/:sessionId/start — transition DRAFT → ACTIVE
     app.post("/sessions/:sessionId/start", {
@@ -84,10 +66,7 @@ export const sessionRoutes = async (fastify) => {
             id: request.params.sessionId,
             studentId: request.studentId,
         });
-        return reply.send({
-            ...serviceOutput,
-            ...formatSessionDates(serviceOutput),
-        });
+        return reply.send(serviceOutput);
     });
     // POST /sessions/:sessionId/end — transition ACTIVE → ENDED
     app.post("/sessions/:sessionId/end", {
@@ -103,10 +82,7 @@ export const sessionRoutes = async (fastify) => {
             id: request.params.sessionId,
             studentId: request.studentId,
         });
-        return reply.send({
-            ...serviceOutput,
-            ...formatSessionDates(serviceOutput),
-        });
+        return reply.send(serviceOutput);
     });
     // POST /sessions/:sessionId/abort — transition ACTIVE → ABORTED
     app.post("/sessions/:sessionId/abort", {
@@ -122,10 +98,7 @@ export const sessionRoutes = async (fastify) => {
             id: request.params.sessionId,
             studentId: request.studentId,
         });
-        return reply.send({
-            ...serviceOutput,
-            ...formatSessionDates(serviceOutput),
-        });
+        return reply.send(serviceOutput);
     });
     // DELETE /sessions/:sessionId — soft-delete
     app.delete("/sessions/:sessionId", {

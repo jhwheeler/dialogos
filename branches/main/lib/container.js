@@ -1,4 +1,7 @@
 import { S3Storage } from "./storage/index.js";
+import { createSttProvider, createLlmProvider } from "./providers/index.js";
+import { InMemoryJobQueue } from "./queue/index.js";
+import { JobType } from "./queue/types.js";
 import { StudentDataSource } from "../data-sources/student/student.data-source.js";
 import { StudentService } from "../services/student/student.service.js";
 import { TopicDataSource } from "../data-sources/topic/topic.data-source.js";
@@ -11,6 +14,8 @@ import { SessionDataSource } from "../data-sources/session/session.data-source.j
 import { SessionService } from "../services/session/session.service.js";
 import { TurnDataSource } from "../data-sources/turn/turn.data-source.js";
 import { TurnService } from "../services/turn/turn.service.js";
+import { PromptGenerationService } from "../services/prompt-generation/prompt-generation.service.js";
+import { createTranscribeTurnHandler, createGeneratePromptHandler, createRenderArtifactsHandler, } from "../jobs/handlers/index.js";
 export function createContainer(prisma, env) {
     // DataSources and Services are registered here as the feature slices are built.
     // Each agent adds its data source / service to this file.
@@ -45,12 +50,28 @@ export function createContainer(prisma, env) {
     const sourceService = new SourceService(sourceDataSource, topicDataSource, topicFileDataSource);
     dataSources.source = sourceDataSource;
     services.source = sourceService;
+    // ─── Data sources needed by handlers ────────────────────────
+    const turnDataSource = new TurnDataSource(prisma);
     const sessionDataSource = new SessionDataSource(prisma);
-    const sessionService = new SessionService(sessionDataSource, topicDataSource, sourceDataSource);
+    // ─── Providers ──────────────────────────────────────────────
+    const sttProvider = createSttProvider(env);
+    const llmProvider = createLlmProvider(env);
+    // ─── Prompt generation service ─────────────────────────────
+    const promptGenerationService = llmProvider
+        ? new PromptGenerationService(turnDataSource, sessionDataSource, topicDataSource, sourceDataSource, llmProvider)
+        : null;
+    // ─── Job queue ────────────────────────────────────────────────
+    const jobQueue = new InMemoryJobQueue({ maxRetries: 3 });
+    // Register handlers before starting the queue
+    jobQueue.registerHandler(JobType.TRANSCRIBE_TURN, createTranscribeTurnHandler(turnDataSource, jobQueue, sttProvider, storage));
+    jobQueue.registerHandler(JobType.GENERATE_PROMPT, createGeneratePromptHandler(turnDataSource, promptGenerationService));
+    jobQueue.registerHandler(JobType.RENDER_ARTIFACTS, createRenderArtifactsHandler());
+    jobQueue.start();
+    // ─── Services that depend on the queue ────────────────────────
+    const sessionService = new SessionService(sessionDataSource, topicDataSource, sourceDataSource, jobQueue);
     dataSources.session = sessionDataSource;
     services.session = sessionService;
-    const turnDataSource = new TurnDataSource(prisma);
-    const turnService = new TurnService(turnDataSource, sessionDataSource, storage);
+    const turnService = new TurnService(turnDataSource, sessionDataSource, storage, jobQueue);
     dataSources.turn = turnDataSource;
     services.turn = turnService;
     return {
@@ -58,5 +79,6 @@ export function createContainer(prisma, env) {
         env,
         dataSources,
         services,
+        jobQueue,
     };
 }

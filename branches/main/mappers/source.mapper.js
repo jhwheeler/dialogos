@@ -8,7 +8,7 @@ function sourceFromDataSourceToService(input) {
         citation: input.citation,
         extractedText: input.extractedText,
         groundingTier: input.groundingTier,
-        createdAt: input.createdAt,
+        createdAt: input.createdAt.toISOString(),
     };
 }
 export class SourceMapper {

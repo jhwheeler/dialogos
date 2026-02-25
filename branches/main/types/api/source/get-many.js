@@ -3,7 +3,7 @@ export const GetManySourceApiParamsSchema = z.object({
     topicId: z.string().uuid(),
 });
 export const GetManySourceApiOutputSchema = z.object({
-    sources: z.array(z.object({
+    items: z.array(z.object({
         id: z.string().uuid(),
         topicId: z.string().uuid(),
         topicFileId: z.string().uuid().nullable(),
@@ -14,4 +14,5 @@ export const GetManySourceApiOutputSchema = z.object({
         groundingTier: z.number().int(),
         createdAt: z.string().datetime(),
     })),
+    count: z.number().int(),
 });

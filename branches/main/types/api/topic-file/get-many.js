@@ -3,7 +3,7 @@ export const GetManyTopicFileApiInputSchema = z.object({
     topicId: z.string().uuid(),
 });
 export const GetManyTopicFileApiOutputSchema = z.object({
-    files: z.array(z.object({
+    items: z.array(z.object({
         id: z.string().uuid(),
         kind: z.string(),
         storageKey: z.string(),
@@ -12,4 +12,5 @@ export const GetManyTopicFileApiOutputSchema = z.object({
         sizeBytes: z.number(),
         createdAt: z.string().datetime(),
     })),
+    count: z.number().int(),
 });

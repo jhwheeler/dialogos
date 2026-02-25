@@ -23,6 +23,28 @@ export class TurnDataSource {
             },
         });
     }
+    async updateOne(input) {
+        const { id, ...fields } = input;
+        // Build data object with only the fields that were explicitly provided
+        const data = {};
+        if ("studentText" in fields)
+            data.studentText = fields.studentText;
+        if ("assistantText" in fields)
+            data.assistantText = fields.assistantText;
+        if ("assistantPromptType" in fields)
+            data.assistantPromptType = fields.assistantPromptType;
+        if ("assistantDetectedIssue" in fields)
+            data.assistantDetectedIssue = fields.assistantDetectedIssue;
+        if ("latencyMs" in fields)
+            data.latencyMs = fields.latencyMs;
+        if (Object.keys(data).length === 0) {
+            throw new Error("updateOne requires at least one field to update");
+        }
+        return this.prisma.turn.update({
+            where: { id },
+            data,
+        });
+    }
     async countBySession(input) {
         return this.prisma.turn.count({
             where: { sessionId: input.sessionId },

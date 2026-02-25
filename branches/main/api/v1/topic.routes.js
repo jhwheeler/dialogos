@@ -14,13 +14,7 @@ export const topicRoutes = async (fastify) => {
         const serviceOutput = await topicService.getMany({
             studentId: request.studentId,
         });
-        return reply.send({
-            topics: serviceOutput.map((topic) => ({
-                ...topic,
-                createdAt: topic.createdAt.toISOString(),
-                updatedAt: topic.updatedAt.toISOString(),
-            })),
-        });
+        return reply.send({ items: serviceOutput, count: serviceOutput.length });
     });
     // POST /topics — create a new topic
     app.post("/topics", {
@@ -36,11 +30,7 @@ export const topicRoutes = async (fastify) => {
             studentId: request.studentId,
             ...request.body,
         });
-        return reply.status(201).send({
-            ...serviceOutput,
-            createdAt: serviceOutput.createdAt.toISOString(),
-            updatedAt: serviceOutput.updatedAt.toISOString(),
-        });
+        return reply.status(201).send(serviceOutput);
     });
     // GET /topics/:topicId — get one topic (ownership check in service)
     app.get("/topics/:topicId", {
@@ -56,11 +46,7 @@ export const topicRoutes = async (fastify) => {
             id: request.params.topicId,
             studentId: request.studentId,
         });
-        return reply.send({
-            ...serviceOutput,
-            createdAt: serviceOutput.createdAt.toISOString(),
-            updatedAt: serviceOutput.updatedAt.toISOString(),
-        });
+        return reply.send(serviceOutput);
     });
     // PATCH /topics/:topicId — update a topic (ownership check in service)
     app.patch("/topics/:topicId", {
@@ -78,11 +64,7 @@ export const topicRoutes = async (fastify) => {
             studentId: request.studentId,
             ...request.body,
         });
-        return reply.send({
-            ...serviceOutput,
-            createdAt: serviceOutput.createdAt.toISOString(),
-            updatedAt: serviceOutput.updatedAt.toISOString(),
-        });
+        return reply.send(serviceOutput);
     });
     // DELETE /topics/:topicId — soft-delete (sets deletedAt)
     app.delete("/topics/:topicId", {

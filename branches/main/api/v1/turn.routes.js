@@ -1,9 +1,4 @@
 import { PresignAudioTurnApiParamsSchema, PresignAudioTurnApiBodySchema, PresignAudioTurnApiOutputSchema, CreateOneTurnApiParamsSchema, CreateOneTurnApiBodySchema, CreateOneTurnApiOutputSchema, GetOneTurnApiParamsSchema, GetOneTurnApiOutputSchema, GetManyTurnApiParamsSchema, GetManyTurnApiOutputSchema, } from "../../types/api/turn/index.js";
-function formatTurnDates(turn) {
-    return {
-        createdAt: turn.createdAt.toISOString(),
-    };
-}
 export const turnRoutes = async (fastify) => {
     const app = fastify.withTypeProvider();
     const turnService = fastify.container.services.turn;
@@ -43,10 +38,7 @@ export const turnRoutes = async (fastify) => {
             studentId: request.studentId,
             studentAudioKey: request.body.studentAudioKey,
         });
-        return reply.status(201).send({
-            ...serviceOutput,
-            ...formatTurnDates(serviceOutput),
-        });
+        return reply.status(201).send(serviceOutput);
     });
     // GET /sessions/:sessionId/turns/:turnId — get single turn (for polling)
     app.get("/sessions/:sessionId/turns/:turnId", {
@@ -63,10 +55,7 @@ export const turnRoutes = async (fastify) => {
             sessionId: request.params.sessionId,
             studentId: request.studentId,
         });
-        return reply.send({
-            ...serviceOutput,
-            ...formatTurnDates(serviceOutput),
-        });
+        return reply.send(serviceOutput);
     });
     // GET /sessions/:sessionId/turns — list all turns for a session
     app.get("/sessions/:sessionId/turns", {
@@ -82,11 +71,6 @@ export const turnRoutes = async (fastify) => {
             sessionId: request.params.sessionId,
             studentId: request.studentId,
         });
-        return reply.send({
-            turns: serviceOutput.map((turn) => ({
-                ...turn,
-                ...formatTurnDates(turn),
-            })),
-        });
+        return reply.send({ items: serviceOutput, count: serviceOutput.length });
     });
 };

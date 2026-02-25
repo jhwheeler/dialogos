@@ -1,14 +1,17 @@
 import { NotFoundError } from "../../errors/not-found-error.js";
 import { ConflictError } from "../../errors/conflict-error.js";
+import { JobType } from "../../lib/queue/types.js";
 import { SessionMapper } from "../../mappers/session.mapper.js";
 export class SessionService {
     sessionDataSource;
     topicDataSource;
     sourceDataSource;
-    constructor(sessionDataSource, topicDataSource, sourceDataSource) {
+    jobQueue;
+    constructor(sessionDataSource, topicDataSource, sourceDataSource, jobQueue) {
         this.sessionDataSource = sessionDataSource;
         this.topicDataSource = topicDataSource;
         this.sourceDataSource = sourceDataSource;
+        this.jobQueue = jobQueue;
     }
     async verifyTopicOwnership(topicId, studentId) {
         const topic = await this.topicDataSource.getOne({ id: topicId });
@@ -81,6 +84,16 @@ export class SessionService {
         });
         if (!updated) {
             throw new ConflictError("Cannot end session: invalid current status");
+        }
+        // Best-effort: enqueue artifact generation for the ended session
+        try {
+            await this.jobQueue.enqueue({
+                jobType: JobType.RENDER_ARTIFACTS,
+                sessionId: input.id,
+            });
+        }
+        catch (error) {
+            console.error("Failed to enqueue RENDER_ARTIFACTS job for session %s:", input.id, error);
         }
         return SessionMapper.endOne.output.fromDataSourceToService(updated);
     }
