@@ -31,6 +31,9 @@ export class PromptGenerationService {
         let source = null;
         if (session.sourceId) {
             source = await this.sourceDataSource.getOne({ id: session.sourceId });
+            if (!source) {
+                throw new NotFoundError(`Source not found: ${session.sourceId}`);
+            }
         }
         // Fetch prior turns (last 6)
         const allTurns = await this.turnDataSource.getMany({ sessionId: turn.sessionId });
