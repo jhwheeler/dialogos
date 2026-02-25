@@ -1,4 +1,3 @@
-const MAX_EXTRACTED_TEXT_LENGTH = 8000;
 export function buildSystemPrompt(config) {
     const parts = [];
     // ─── Identity & personality ─────────────────────────────────
@@ -79,11 +78,8 @@ function buildSourceAnchoring(config) {
     }
     parts.push(`Grounding tier: ${config.groundingTier}`);
     if (config.groundingTier === 1 && config.sourceExtractedText) {
-        // Strip XML-like tags to prevent delimiter breakout
-        const cleaned = config.sourceExtractedText.replace(/<\/?[a-zA-Z_][\w.-]*>/g, "");
-        const truncated = cleaned.slice(0, MAX_EXTRACTED_TEXT_LENGTH);
-        const suffix = cleaned.length > MAX_EXTRACTED_TEXT_LENGTH ? "\n[...truncated]" : "";
-        parts.push(`SOURCE TEXT:\n<source_text>\n${truncated}${suffix}\n</source_text>`);
+        // Text is already sanitized (angle brackets escaped) and truncated by buildPromptContext
+        parts.push(`SOURCE TEXT:\n<source_text>\n${config.sourceExtractedText}\n</source_text>`);
     }
     parts.push(`When the session has source material, enforce these rules:
 1. Student claims "the author argues X" but source doesn't support it → prompt_type: "locate_passage", detected_issue: "unsupported_by_source". Ask: "Where does the author say that?"
