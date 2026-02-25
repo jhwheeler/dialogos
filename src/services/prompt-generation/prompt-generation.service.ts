@@ -54,6 +54,9 @@ export class PromptGenerationService {
     } | null = null;
     if (session.sourceId) {
       source = await this.sourceDataSource.getOne({ id: session.sourceId });
+      if (!source) {
+        throw new NotFoundError(`Source not found: ${session.sourceId}`);
+      }
     }
 
     // Fetch prior turns (last 6)

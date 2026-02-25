@@ -102,10 +102,16 @@ function countWords(text: string): number {
     .filter((w) => w.length > 0).length;
 }
 
+/** Escape special regex characters in a string. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function findBannedPhrase(text: string): string | null {
   const lower = text.toLowerCase();
   for (const phrase of BANNED_PHRASES) {
-    const pattern = new RegExp(`\\b${phrase.replace(/\s+/g, "\\s+")}\\b`);
+    const escaped = escapeRegExp(phrase).replace(/\s+/g, "\\s+");
+    const pattern = new RegExp(`\\b${escaped}\\b`);
     if (pattern.test(lower)) {
       return phrase;
     }
@@ -115,16 +121,17 @@ function findBannedPhrase(text: string): string | null {
 
 /**
  * Check that the text is exactly one sentence.
- * Heuristic: count sentence-ending punctuation (. ! ?) that are followed by
- * a space and uppercase letter or end of string. Allow trailing punctuation.
+ * Counts groups of terminal punctuation (. ! ?) that are followed by whitespace
+ * and more text, regardless of case. A single trailing punctuation group is allowed.
  */
 function isOneSentence(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
 
-  // Count sentence-ending punctuation marks
-  // Split on sentence boundaries: a terminal punctuation followed by space + uppercase
-  const sentenceBreaks = trimmed.match(/[.!?]\s+[A-Z]/g);
+  // Count terminal-punctuation groups followed by whitespace and more text.
+  // This catches "Define justice. be specific." (lowercase continuation) as well
+  // as the uppercase case.
+  const sentenceBreaks = trimmed.match(/[.!?]+\s+\S/g);
   if (sentenceBreaks && sentenceBreaks.length > 0) {
     return false;
   }

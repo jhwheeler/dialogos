@@ -32,11 +32,18 @@ export interface PriorTurn {
 
 const MAX_STUDENT_TEXT_LENGTH = 2000;
 const MAX_EXTRACTED_TEXT_LENGTH = 8000;
+const MAX_PRIOR_TURN_TEXT_LENGTH = 2000;
 
-/** Strip control characters (keep newlines and tabs). */
+/** Strip control characters (keep newlines and tabs) and escape angle brackets
+ *  to prevent prompt injection via XML tag breakout. */
 function sanitizeText(text: string): string {
-  // eslint-disable-next-line no-control-regex
-  return text.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "");
+  return (
+    text
+      // eslint-disable-next-line no-control-regex -- intentional: strip dangerous control chars for prompt injection prevention
+      .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "")
+      .replace(/</g, "\uFF1C")
+      .replace(/>/g, "\uFF1E")
+  );
 }
 
 export function buildPromptContext(input: PromptBuilderInput): PromptContext {
@@ -50,7 +57,7 @@ export function buildPromptContext(input: PromptBuilderInput): PromptContext {
     if (turn.studentText) {
       conversationHistory.push({
         role: "student",
-        text: `<student_speech>${sanitizeText(turn.studentText)}</student_speech>`,
+        text: `<student_speech>${sanitizeText(turn.studentText).slice(0, MAX_PRIOR_TURN_TEXT_LENGTH)}</student_speech>`,
       });
     }
     if (turn.assistantText) {

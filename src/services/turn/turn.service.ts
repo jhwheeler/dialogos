@@ -109,7 +109,11 @@ export class TurnService {
             turnId: turn.id,
           });
         } catch (enqueueError) {
-          console.error("Failed to enqueue TRANSCRIBE_TURN job for turn %s:", turn.id, enqueueError);
+          console.error(
+            "Failed to enqueue TRANSCRIBE_TURN job for turn %s:",
+            turn.id,
+            enqueueError,
+          );
         }
 
         return TurnMapper.createOne.output.fromDataSourceToService(turn);

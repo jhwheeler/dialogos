@@ -91,13 +91,13 @@ export class AnthropicLlm implements LlmProvider {
       throw new Error("Anthropic response did not contain a tool_use block");
     }
 
-    const input = toolUseBlock.input as Record<string, string>;
+    const input = toolUseBlock.input as Record<string, unknown>;
 
     return {
-      nextPrompt: input.next_prompt,
-      promptType: input.prompt_type,
-      detectedIssue: input.detected_issue,
-      stopReason: input.stop_reason,
+      nextPrompt: String(input.next_prompt ?? ""),
+      promptType: String(input.prompt_type ?? ""),
+      detectedIssue: String(input.detected_issue ?? ""),
+      stopReason: String(input.stop_reason ?? ""),
     };
   }
 }
