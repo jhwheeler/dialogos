@@ -8,7 +8,6 @@ export interface SystemPromptConfig {
   topicDescription?: string;
 }
 
-
 export function buildSystemPrompt(config: SystemPromptConfig): string {
   const parts: string[] = [];
 
