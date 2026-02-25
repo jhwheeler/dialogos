@@ -7,4 +7,5 @@ export interface StorageProvider {
     contentLength?: number,
   ): Promise<string>;
   deleteObject(key: string): Promise<void>;
+  getObject(key: string): Promise<Buffer>;
 }

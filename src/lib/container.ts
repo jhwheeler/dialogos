@@ -2,6 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 import type { AppEnv } from "./env.js";
 import { S3Storage } from "./storage/index.js";
 import type { StorageProvider } from "./storage/index.js";
+import { createSttProvider, createLlmProvider } from "./providers/index.js";
 import { InMemoryJobQueue } from "./queue/index.js";
 import { JobType } from "./queue/types.js";
 import type { JobQueue } from "./queue/job-queue.js";
@@ -17,6 +18,7 @@ import { SessionDataSource } from "../data-sources/session/session.data-source.j
 import { SessionService } from "../services/session/session.service.js";
 import { TurnDataSource } from "../data-sources/turn/turn.data-source.js";
 import { TurnService } from "../services/turn/turn.service.js";
+import { PromptGenerationService } from "../services/prompt-generation/prompt-generation.service.js";
 import {
   createTranscribeTurnHandler,
   createGeneratePromptHandler,
@@ -77,23 +79,42 @@ export function createContainer(prisma: PrismaClient, env: AppEnv): AppContainer
   dataSources.source = sourceDataSource;
   services.source = sourceService;
 
+  // ─── Data sources needed by handlers ────────────────────────
+  const turnDataSource = new TurnDataSource(prisma);
+  const sessionDataSource = new SessionDataSource(prisma);
+
+  // ─── Providers ──────────────────────────────────────────────
+  const sttProvider = createSttProvider(env);
+  const llmProvider = createLlmProvider(env);
+
+  // ─── Prompt generation service ─────────────────────────────
+  const promptGenerationService = llmProvider
+    ? new PromptGenerationService(
+        turnDataSource,
+        sessionDataSource,
+        topicDataSource,
+        sourceDataSource,
+        llmProvider,
+      )
+    : null;
+
   // ─── Job queue ────────────────────────────────────────────────
   const jobQueue = new InMemoryJobQueue({ maxRetries: 3 });
-
-  const turnDataSource = new TurnDataSource(prisma);
 
   // Register handlers before starting the queue
   jobQueue.registerHandler(
     JobType.TRANSCRIBE_TURN,
-    createTranscribeTurnHandler(turnDataSource, jobQueue),
+    createTranscribeTurnHandler(turnDataSource, jobQueue, sttProvider, storage),
   );
-  jobQueue.registerHandler(JobType.GENERATE_PROMPT, createGeneratePromptHandler(turnDataSource));
+  jobQueue.registerHandler(
+    JobType.GENERATE_PROMPT,
+    createGeneratePromptHandler(turnDataSource, promptGenerationService),
+  );
   jobQueue.registerHandler(JobType.RENDER_ARTIFACTS, createRenderArtifactsHandler());
 
   jobQueue.start();
 
   // ─── Services that depend on the queue ────────────────────────
-  const sessionDataSource = new SessionDataSource(prisma);
   const sessionService = new SessionService(
     sessionDataSource,
     topicDataSource,
