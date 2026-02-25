@@ -38,7 +38,9 @@ const MAX_PRIOR_TURN_TEXT_LENGTH = 2000;
  *  to prevent prompt injection via tag breakout. */
 function sanitizeText(text: string): string {
   // eslint-disable-next-line no-control-regex
-  return text.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "").replace(/<\/?[a-zA-Z_][\w.-]*>/g, "");
+  return text
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "")
+    .replace(/<\/?[a-zA-Z_][\w.-]*>/g, "");
 }
 
 export function buildPromptContext(input: PromptBuilderInput): PromptContext {
