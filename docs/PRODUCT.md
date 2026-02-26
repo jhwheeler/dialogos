@@ -610,13 +610,13 @@ Progress signals should be **descriptive, not evaluative**. "You defined terms i
 - Trivium stage selection (Grammar / Logic / Rhetoric / Combined)
 - Socrates Mode with deterministic rules + source-anchoring
 - Transcript + summary + rubric artifact generation
-- Source preprocessing pipeline (clean text extraction with student confirmation)
-- Open/closed book session phases (Classical Notes alternating rhythm)
-- Explicit stage transition language in coach prompts
-- Graceful degradation for unreadable sources (auto-downgrade to Tier 3)
 - Per-session metrics storage
 - Session review screen
 - Session transcript export (Markdown / plain text)
+- Source preprocessing pipeline (clean text extraction with student confirmation) *(workshop addition — PR-4b)*
+- Open/closed book session phases (Classical Notes alternating rhythm) *(workshop addition — PR-4b)*
+- Explicit stage transition language in coach prompts *(workshop addition — PR-4b)*
+- Graceful degradation for unreadable sources (auto-downgrade to Tier 3) *(workshop addition — PR-4b)*
 
 ### Phase 2: Concept Ledger
 
@@ -624,9 +624,9 @@ Progress signals should be **descriptive, not evaluative**. "You defined terms i
 - Approve/reject/tag/link workflow
 - Ledger view per topic
 - Ledger entry CRUD
-- Themes/tags system (student-defined session tags)
-- Session Review View (commonplace book page per session)
-- Transcription cleanup settings (raw / light cleanup / full rewrite spectrum)
+- Themes/tags system (student-defined session tags) *(workshop addition)*
+- Session Review View (commonplace book page per session) *(workshop addition)*
+- Transcription cleanup settings (raw / light cleanup / full rewrite spectrum) *(workshop addition)*
 
 ### Phase 3: Spaced Re-oralization
 
@@ -641,8 +641,8 @@ Progress signals should be **descriptive, not evaluative**. "You defined terms i
 - Form-based signal tracking over time
 - Personal pattern detection
 - Trends dashboard
-- Cross-session connections (student-inputted links between sessions and ledger entries)
-- Connection browse view
+- Cross-session connections (student-inputted links between sessions and ledger entries) *(workshop addition)*
+- Connection browse view *(workshop addition)*
 
 ### Phase 5: Billing + Launch Polish
 
@@ -651,7 +651,7 @@ Progress signals should be **descriptive, not evaluative**. "You defined terms i
 - OCR extraction (for photo sources)
 - Reference lookup (for known texts)
 - Account export/delete
-- AI-suggested connections (model-proposed cross-references based on session history and ledger entries)
+- AI-suggested connections (model-proposed cross-references based on session history and ledger entries) *(workshop addition)*
 
 ### Explicitly deferred
 

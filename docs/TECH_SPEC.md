@@ -49,10 +49,10 @@ It is not a chat wrapper. It is a practice system with memory, progression, and 
 - End-of-session summary with Grammar/Logic/Rhetoric sections
 - Rubric scoring
 - Per-session metrics storage
-- Source preprocessing pipeline (clean text extraction with student confirmation)
-- Open/closed book session phases (Classical Notes alternating rhythm)
-- Explicit stage transition language in coach prompts
-- Graceful degradation for unreadable sources (auto-downgrade to Tier 3)
+- Source preprocessing pipeline (clean text extraction with student confirmation) *(workshop addition — PR-4b)*
+- Open/closed book session phases (Classical Notes alternating rhythm) *(workshop addition — PR-4b)*
+- Explicit stage transition language in coach prompts *(workshop addition — PR-4b)*
+- Graceful degradation for unreadable sources (auto-downgrade to Tier 3) *(workshop addition — PR-4b)*
 
 ### 1.2 Phase 2: Concept Ledger
 
@@ -61,9 +61,9 @@ It is not a chat wrapper. It is a practice system with memory, progression, and 
 - LedgerEntry CRUD
 - Ledger view per topic
 - Link entries to sources and topics
-- Themes/tags system (student-defined session tags)
-- Session Review View (commonplace book page per session)
-- Transcription cleanup settings (raw / light cleanup / full rewrite spectrum)
+- Themes/tags system (student-defined session tags) *(workshop addition)*
+- Session Review View (commonplace book page per session) *(workshop addition)*
+- Transcription cleanup settings (raw / light cleanup / full rewrite spectrum) *(workshop addition)*
 
 ### 1.3 Phase 3: Spaced Re-oralization
 
@@ -78,8 +78,8 @@ It is not a chat wrapper. It is a practice system with memory, progression, and 
 - Form-based signal tracking over time
 - Personal pattern detection
 - Trends dashboard
-- Cross-session connections (student-inputted links between sessions and ledger entries)
-- Connection browse view
+- Cross-session connections (student-inputted links between sessions and ledger entries) *(workshop addition)*
+- Connection browse view *(workshop addition)*
 
 ### 1.5 Phase 5: Billing + Launch Polish
 
@@ -87,7 +87,7 @@ It is not a chat wrapper. It is a practice system with memory, progression, and 
 - OCR extraction (for photo sources)
 - Reference lookup (for known texts)
 - Delete/export all personal data
-- AI-suggested connections (model-proposed cross-references based on session history and ledger entries)
+- AI-suggested connections (model-proposed cross-references based on session history and ledger entries) *(workshop addition)*
 
 ### 1.6 Explicitly out of scope
 
@@ -419,8 +419,8 @@ When the coach selects an audience for "Explain to X" moves (`prompt_type: "scop
 
 The coach's `next_prompt` must include explicit transition language when `bookPhase` changes:
 
-- `CLOSED_RECALL → OPEN_TEXT`: Include a phrase like "Open your text" or "Let's look at the source now."
-- `OPEN_TEXT → FINAL_COMPRESSION`: Include a phrase like "Close the text" or "From memory now."
+- `closed_recall → open_text`: Include a phrase like "Open your text" or "Let's look at the source now."
+- `open_text → final_compression`: Include a phrase like "Close the text" or "From memory now."
 
 These transition phrases are part of the coach's utterance, not metadata. The student hears them.
 
@@ -466,6 +466,8 @@ stateDiagram-v2
 
 - Create session → `DRAFT`
 - Start session → `ACTIVE`
+  - For Combined sessions: set `bookPhase` to `closed_recall` on start.
+  - For single-stage sessions: `bookPhase` remains null.
 - End session (student ends or trial ends) → `ENDED` or `ABORTED`
 - Generate artifacts as async job upon `ENDED`
 
@@ -474,16 +476,16 @@ stateDiagram-v2
 For Combined Trivium sessions, the session has an additional sub-state tracking the Classical Notes book rhythm:
 
 ```
-CLOSED_RECALL → OPEN_TEXT → FINAL_COMPRESSION
+closed_recall → open_text → final_compression
 ```
 
 Transition rules:
 
-- `CLOSED_RECALL → OPEN_TEXT`: Coach signals "open your text." Triggered after Grammar work is complete (coach determines readiness based on recall quality). The assistant's `next_prompt` for the transition turn should include explicit transition language.
-- `OPEN_TEXT → FINAL_COMPRESSION`: Coach signals "close the text." Triggered after Rhetoric work and cross-exam are complete.
+- `closed_recall → open_text`: Coach signals "open your text." Triggered after Grammar work is complete (coach determines readiness based on recall quality). The assistant's `next_prompt` for the transition turn should include explicit transition language.
+- `open_text → final_compression`: Coach signals "close the text." Triggered after Rhetoric work and cross-exam are complete.
 - Transitions are forward-only within a single session. No going back.
 
-The `bookPhase` is included in the model context so the coach knows whether the student should have the text available. During `CLOSED_RECALL`, source-anchoring rules are relaxed (the student is working from memory). During `OPEN_TEXT`, full source-anchoring applies. During `FINAL_COMPRESSION`, the student must synthesize from memory again.
+The `bookPhase` is included in the model context so the coach knows whether the student should have the text available. During `closed_recall`, source-anchoring rules are relaxed (the student is working from memory). During `open_text`, full source-anchoring applies. During `final_compression`, the student must synthesize from memory again.
 
 For single-stage sessions (Grammar-only, Logic-only, Rhetoric-only), `bookPhase` is null and the existing behavior applies unchanged.
 
@@ -986,13 +988,13 @@ All endpoints under `/v1`.
   - Fetch raw file from storage (image, PDF, document)
   - Run model-based text extraction (handles OCR, foreign script, mixed content)
   - Produce clean working text as candidate `extractedText`
-  - Store result with status `pending_confirmation` on the Source entity
+  - Status transitions: `none → processing` (job enqueued) → `pending` (extraction complete, awaiting student confirmation) → `confirmed` (student approved) or `degraded` (extraction failed or low confidence)
   - Student confirms via API before text is finalized
-  - On confirmation: set `extractedText`, update `groundingTier` to Tier 1
-  - On rejection: student can re-upload or manually provide text
-  - Graceful degradation: if extraction confidence is low, mark source with `preprocessingStatus: degraded` and notify student ("I can't read this clearly — source fidelity is on you today"); session proceeds at Tier 3
+  - On confirmation: set `preprocessingStatus: confirmed`, finalize `extractedText`, update `groundingTier` to Tier 1
+  - On rejection: student can re-upload or manually provide text; status resets to `none`
+  - Graceful degradation: if extraction confidence is low, set `preprocessingStatus: degraded` and notify student ("I can't read this clearly — source fidelity is on you today"); session proceeds at Tier 3
 - `CLEANUP_TRANSCRIPT(sessionId, cleanupLevel)` (Phase 2)
-  - Runs after session ends, before artifact rendering
+  - **Sequencing:** Runs after session ends and before `RENDER_ARTIFACTS`. `RENDER_ARTIFACTS` must wait for `CLEANUP_TRANSCRIPT` to complete (enforce via job dependency or chained enqueue). `RENDER_ARTIFACTS` uses the cleaned transcript for the `transcript` artifact and preserves the raw STT output as a separate `transcript_raw` artifact.
   - `cleanupLevel` determined by student settings: `raw` | `light` | `full`
   - `raw`: no processing; STT output as-is
   - `light` (default): fix obvious STT errors (e.g., proper nouns, punctuation), normalize formatting. Does not change the student's actual words or phrasing.
