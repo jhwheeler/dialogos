@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:setup": "psql postgresql://postgres:postgres@127.0.0.1:54422/postgres -c 'CREATE DATABASE dialogos_test;' 2>/dev/null; DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54422/dialogos_test npx prisma migrate deploy",
     "test:coverage": "vitest run --coverage",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",

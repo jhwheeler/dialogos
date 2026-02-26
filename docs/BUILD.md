@@ -6,6 +6,11 @@
 3. Validate Prisma schema: `npm run prisma:validate`
 4. Start development server: `npm run dev`
 
+## Running tests locally
+1. Start Supabase: `supabase start`
+2. Create test database (first time only): `npm run test:setup`
+3. Run tests: `npm test`
+
 ## Near-term build targets
 - Backend: Fastify + TypeScript + Prisma + Postgres
 - Mobile client: Flutter
