@@ -49,6 +49,10 @@ It is not a chat wrapper. It is a practice system with memory, progression, and 
 - End-of-session summary with Grammar/Logic/Rhetoric sections
 - Rubric scoring
 - Per-session metrics storage
+- Source preprocessing pipeline (clean text extraction with student confirmation)
+- Open/closed book session phases (Classical Notes alternating rhythm)
+- Explicit stage transition language in coach prompts
+- Graceful degradation for unreadable sources (auto-downgrade to Tier 3)
 
 ### 1.2 Phase 2: Concept Ledger
 
@@ -57,6 +61,9 @@ It is not a chat wrapper. It is a practice system with memory, progression, and 
 - LedgerEntry CRUD
 - Ledger view per topic
 - Link entries to sources and topics
+- Themes/tags system (student-defined session tags)
+- Session Review View (commonplace book page per session)
+- Transcription cleanup settings (raw / light cleanup / full rewrite spectrum)
 
 ### 1.3 Phase 3: Spaced Re-oralization
 
@@ -71,6 +78,8 @@ It is not a chat wrapper. It is a practice system with memory, progression, and 
 - Form-based signal tracking over time
 - Personal pattern detection
 - Trends dashboard
+- Cross-session connections (student-inputted links between sessions and ledger entries)
+- Connection browse view
 
 ### 1.5 Phase 5: Billing + Launch Polish
 
@@ -78,6 +87,7 @@ It is not a chat wrapper. It is a practice system with memory, progression, and 
 - OCR extraction (for photo sources)
 - Reference lookup (for known texts)
 - Delete/export all personal data
+- AI-suggested connections (model-proposed cross-references based on session history and ledger entries)
 
 ### 1.6 Explicitly out of scope
 
@@ -100,7 +110,7 @@ Represents an authenticated person.
 - `email` (nullable if provider doesn't provide; store normalized)
 - `displayName`
 - `createdAt`, `updatedAt`
-- `settings` (JSON: voice rate, autoplay, strictness flags)
+- `settings` (JSON: voice rate, autoplay, strictness flags, transcriptCleanupLevel [raw | light | full, default: light])
 - `plan` (free | paid)
 - `trialRemainingSeconds` (int)
 - `deletedAt` (nullable)
@@ -140,6 +150,8 @@ Semantic content entity representing what the student is studying. May or may no
 - `citation` (nullable — e.g. "Republic 327a–331d")
 - `extractedText` (nullable — populated by OCR, doc extraction, or STT)
 - `groundingTier` (1 | 2 | 3 — derived from sourceType + text availability)
+- `preprocessingStatus` (pending | processing | confirmed | degraded | none — default `none` for reference/voice types)
+- `preprocessingConfidence` (float, nullable — model's self-reported confidence in extraction quality)
 - `createdAt`, `deletedAt`
 
 ### 2.5 Session
@@ -151,6 +163,7 @@ Discrete practice run inside a topic, linked to a source.
 - `studentId` (FK redundant but convenient for queries)
 - `sourceId` (FK, nullable — sessions should have a source but may not always)
 - `triviumStage` (grammar | logic | rhetoric | combined)
+- `bookPhase` (closed_recall | open_text | final_compression — tracks the Classical Notes alternating rhythm within a Combined session; nullable for non-Combined stages)
 - `status` (draft | active | ended | aborted)
 - `startedAt`, `endedAt`
 - `costCentsEstimate` (int)
@@ -178,7 +191,7 @@ Generated at end of session (and optionally mid-session).
 - `SessionArtifact`
   - `id` (UUID)
   - `sessionId` (FK)
-  - `kind` (transcript | summary | rubric | export_md)
+  - `kind` (transcript | transcript_raw | summary | rubric | export_md)
   - `content` (TEXT or JSON)
   - `createdAt`
 
@@ -266,7 +279,7 @@ All model outputs used for prompting MUST validate against this JSON schema:
 ```json
 {
   "next_prompt": "string (<= 12 words default)",
-  "prompt_type": "define | distinguish | premise | inference | objection | compress | clarify | example | scope | contradiction | locate_passage | reconcile | redirect_to_student | scaffold",
+  "prompt_type": "define | distinguish | premise | inference | objection | compress | clarify | example | scope | contradiction | locate_passage | reconcile | redirect_to_student | scaffold | transition",
   "detected_issue": "vague_term | missing_premise | equivocation | drift | contradiction | unclear_referent | unsupported_claim | unsupported_by_source | contradicts_source | misattribution | content_request | none",
   "stop_reason": "needs_definition | needs_example | needs_premise | needs_scope | needs_source_evidence | ok_continue"
 }
@@ -278,6 +291,8 @@ New prompt types for source-anchoring: `locate_passage` (demand textual evidence
 
 New prompt types for content question handling: `redirect_to_student` (Socratic turn-back when student asks for content), `scaffold` (partial scaffold when student is stuck — quote a passage, narrow the question, highlight a structural clue).
 
+New prompt type for session flow: `transition` (explicit stage/phase transition signal — "Open your text now" or "Let's move to Logic"). Used when the coach signals a book phase or trivium stage change during Combined sessions.
+
 New detected issues for source-anchoring: `unsupported_by_source`, `contradicts_source`, `misattribution`.
 
 New detected issue for content question handling: `content_request` (student asked for summary, explanation, or meaning of source material).
@@ -287,6 +302,7 @@ New detected issue for content question handling: `content_request` (student ask
 Hard rules (enforced by server-side validation + regeneration):
 
 - `next_prompt` must be **one sentence**.
+- `next_prompt` must contain ONLY the question or instruction. No preamble, no context-setting, no mini-lecture before or after the question. The question IS the entire turn. Any framing ("That's an interesting point, but..." or "Building on what you said...") violates the one-move-per-turn contract.
 - No praise words (blocklist): "great", "perfect", "awesome", "nice job", "excellent", "love", "good" (in evaluative sense), etc.
 - No recap unless the student explicitly requests a recap (detect via intent or explicit phrase).
 - No unsolicited teaching paragraphs.
@@ -319,6 +335,8 @@ When the session's Source has extracted text (Tier 1) or is a known canonical wo
 
 **Anti-offloading constraint:** The AI never says "here's what the text actually means." It holds the student accountable to the text without explaining it for them.
 
+**Source citation as friction tool:** When enforcing source-anchoring rules at Tier 1, the coach should quote or reference specific source text in `next_prompt`. This is not teaching — it creates productive friction. Example: "You said Clement hedges. I'm reading 'perhaps also' at line 12 — does that support your reading?" The citation is a challenge, not an explanation. At Tier 2, the coach references known passages by name/number rather than quoting verbatim.
+
 **Source-grounding tiers:**
 
 | Tier | Source availability | AI capability |
@@ -326,6 +344,18 @@ When the session's Source has extracted text (Tier 1) or is a known canonical wo
 | **Tier 1** | Extracted text available (OCR, doc upload) | Strongest grounding. Can quote source verbatim. |
 | **Tier 2** | Known/canonical text, no upload | Draws on training knowledge. Can demand evidence, flag likely misreadings. |
 | **Tier 3** | Obscure or no source text | Form-only coaching. Cannot verify content claims. |
+
+**Graceful degradation protocol:**
+
+If source preprocessing fails or produces low-confidence output:
+
+1. The system sets `preprocessingStatus: degraded` on the Source.
+2. The session's `groundingTier` is automatically downgraded to Tier 3 (form-only coaching).
+3. The coach's opening prompt acknowledges the limitation: "I can't read this source clearly — source fidelity is on you today. I'll focus on form."
+4. Source-anchoring rules (Section 4.4 table) are disabled for this session; only deterministic Socratic rules (Section 4.3) apply.
+5. The session review artifact notes the degraded grounding: "Source grounding: Tier 3 (degraded — preprocessing failed)."
+
+This applies to any scenario where the system cannot reliably access source text: unreadable images, corrupted PDFs, unsupported file formats, or model inability to parse the content.
 
 ### 4.5 Content question handling (redirect → scaffold)
 
@@ -375,6 +405,25 @@ This pipeline is the difference between "we asked the model to behave" and "the 
   - source-anchoring rules (Section 4.4) with grounding tier
 - Low temperature, small token cap.
 
+### 4.8 Stage-specific behavioral rules
+
+**Rhetoric stage — audience selection:**
+
+When the coach selects an audience for "Explain to X" moves (`prompt_type: "scope"` or `prompt_type: "compress"`), the audience must be:
+
+- Consistent with the source's original rhetorical context, OR
+- Chosen to create productive friction with the argument's assumptions.
+- The audience must NOT invert the argument (e.g., don't ask a student studying patristic theology to explain to a context that strips all shared premises).
+
+**Combined stage — book phase awareness:**
+
+The coach's `next_prompt` must include explicit transition language when `bookPhase` changes:
+
+- `CLOSED_RECALL → OPEN_TEXT`: Include a phrase like "Open your text" or "Let's look at the source now."
+- `OPEN_TEXT → FINAL_COMPRESSION`: Include a phrase like "Close the text" or "From memory now."
+
+These transition phrases are part of the coach's utterance, not metadata. The student hears them.
+
 ---
 
 ## 5) Session state machine
@@ -419,6 +468,24 @@ stateDiagram-v2
 - Start session → `ACTIVE`
 - End session (student ends or trial ends) → `ENDED` or `ABORTED`
 - Generate artifacts as async job upon `ENDED`
+
+### 5.4 Book phase state machine (Combined Trivium sessions)
+
+For Combined Trivium sessions, the session has an additional sub-state tracking the Classical Notes book rhythm:
+
+```
+CLOSED_RECALL → OPEN_TEXT → FINAL_COMPRESSION
+```
+
+Transition rules:
+
+- `CLOSED_RECALL → OPEN_TEXT`: Coach signals "open your text." Triggered after Grammar work is complete (coach determines readiness based on recall quality). The assistant's `next_prompt` for the transition turn should include explicit transition language.
+- `OPEN_TEXT → FINAL_COMPRESSION`: Coach signals "close the text." Triggered after Rhetoric work and cross-exam are complete.
+- Transitions are forward-only within a single session. No going back.
+
+The `bookPhase` is included in the model context so the coach knows whether the student should have the text available. During `CLOSED_RECALL`, source-anchoring rules are relaxed (the student is working from memory). During `OPEN_TEXT`, full source-anchoring applies. During `FINAL_COMPRESSION`, the student must synthesize from memory again.
+
+For single-stage sessions (Grammar-only, Logic-only, Rhetoric-only), `bookPhase` is null and the existing behavior applies unchanged.
 
 ---
 
@@ -619,6 +686,7 @@ create table students (
   voice_rate double precision,
   autoplay boolean,
   strictness strictness,
+  transcript_cleanup_level text not null default 'light', -- raw | light | full
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
@@ -657,6 +725,8 @@ create table sources (
   citation text, -- e.g. "Republic 327a-331d"
   extracted_text text,
   grounding_tier int not null default 3, -- 1 | 2 | 3
+  preprocessing_status text not null default 'none', -- pending | processing | confirmed | degraded | none
+  preprocessing_confidence double precision,
   created_at timestamptz not null default now(),
   deleted_at timestamptz
 );
@@ -667,6 +737,7 @@ create table sessions (
   topic_id uuid not null references topics(id),
   source_id uuid references sources(id),
   trivium_stage text not null default 'combined', -- grammar | logic | rhetoric | combined
+  book_phase text, -- closed_recall | open_text | final_compression (nullable; Combined stage only)
   status text not null,
   started_at timestamptz,
   ended_at timestamptz,
@@ -791,6 +862,15 @@ All endpoints under `/v1`.
   - body: `{ title?, citation?, extractedText? }`
 - `DELETE /v1/topics/:topicId/sources/:sourceId`
   - soft-delete
+- `POST /v1/sources/:sourceId/preprocess`
+  - Enqueues `PREPROCESS_SOURCE` job
+  - Returns: `{ status: "processing" }`
+- `POST /v1/sources/:sourceId/confirm-text`
+  - body: `{ confirmed: true }` or `{ confirmed: false, correctedText?: string }`
+  - Finalizes preprocessed text; updates `preprocessingStatus` to `confirmed`
+  - If rejected with `correctedText`, uses student-provided text instead
+- `GET /v1/sources/:sourceId/preprocessing-status`
+  - Returns: `{ status, confidence, candidateText? }`
 
 #### Sessions
 
@@ -804,6 +884,12 @@ All endpoints under `/v1`.
   - transitions to `ENDED`, enqueues artifact job + ledger candidate extraction (Phase 2)
 - `DELETE /v1/sessions/:sessionId`
   - soft delete
+- `POST /v1/sessions/:sessionId/transition-book-phase`
+  - body: `{ targetPhase: "open_text" | "final_compression" }`
+  - Enforces valid forward-only transitions: closed_recall → open_text → final_compression
+  - Returns 409 if transition is invalid
+  - Updates `bookPhase` on session
+  - Design note: alternatively, book phase transitions could be handled implicitly by the prompt generation pipeline (the coach decides when to transition, the system updates the phase via `prompt_type: "transition"`). The explicit endpoint gives the student/client control; the implicit approach lets the coach drive the rhythm. Resolve during implementation.
 
 #### Turns (core loop)
 
@@ -896,6 +982,23 @@ All endpoints under `/v1`.
   - after session ends, create ReviewScheduleItems for approved ledger entries
   - apply spacing algorithm (3/7/21 day defaults)
   - generate prompt text for each review item
+- `PREPROCESS_SOURCE(sourceId)` (Phase 1)
+  - Fetch raw file from storage (image, PDF, document)
+  - Run model-based text extraction (handles OCR, foreign script, mixed content)
+  - Produce clean working text as candidate `extractedText`
+  - Store result with status `pending_confirmation` on the Source entity
+  - Student confirms via API before text is finalized
+  - On confirmation: set `extractedText`, update `groundingTier` to Tier 1
+  - On rejection: student can re-upload or manually provide text
+  - Graceful degradation: if extraction confidence is low, mark source with `preprocessingStatus: degraded` and notify student ("I can't read this clearly — source fidelity is on you today"); session proceeds at Tier 3
+- `CLEANUP_TRANSCRIPT(sessionId, cleanupLevel)` (Phase 2)
+  - Runs after session ends, before artifact rendering
+  - `cleanupLevel` determined by student settings: `raw` | `light` | `full`
+  - `raw`: no processing; STT output as-is
+  - `light` (default): fix obvious STT errors (e.g., proper nouns, punctuation), normalize formatting. Does not change the student's actual words or phrasing.
+  - `full`: AI rewrites for clarity and grammar. All AI-modified text is flagged with `ai_modified: true` in the transcript artifact.
+  - Output: cleaned transcript stored alongside raw transcript (both preserved)
+  - Anti-offloading constraint: even at `full` level, the cleanup preserves the student's ideas and argument structure. It fixes surface errors, not substance.
 
 ### 9.3 Speaking (TTS)
 
@@ -1144,6 +1247,10 @@ See **[PLAN.md](./PLAN.md)** for the full phased implementation plan, PR breakdo
 - Concept Ledger revision flow: when a student re-articulates a definition in a later session, how does the ledger handle versioning? Link old → new? Replace? Keep history?
 - Re-oralization notification UX: push notification vs in-app prompt on open? How to avoid notification fatigue?
 - Source grounding tier assignment: should the student self-declare grounding tier for references, or should the system probe/verify?
+- Source preprocessing model choice: which model handles preprocessing? Same as session model or a cheaper/faster model optimized for OCR and text extraction?
+- Book phase transitions: should transitions be explicit (student/coach triggers API) or implicit (coach's `prompt_type: "transition"` triggers server-side phase update)?
+- Transcription cleanup timing: should cleanup run before or after artifact rendering? Should raw transcript always be preserved alongside cleaned version?
+- Long document preprocessing: how to handle 100+ page documents? Extract relevant section only, or process entire document?
 
 ---
 
@@ -1177,8 +1284,26 @@ Content question handling (when student asks about material):
 - If the student asks again or says they are stuck, provide a partial scaffold — quote a relevant passage, narrow the question, or highlight a structural clue. Never provide the full answer.
 - Never summarize, interpret, or explain the source for the student. Give them something to push against, not something to copy.
 
+Source citation for friction (when grounding tier <= 2):
+- When enforcing source-anchoring rules, cite the source directly in your question. Quote a phrase, name a term, point to a line. This creates productive friction. Example: "You said the author hedges. I see 'perhaps also' — does that support your reading?"
+- Do not use citations to teach. Use them to challenge.
+
+Book phase awareness (Combined stage only):
+- Current book phase: {{session.bookPhase}}
+- When book phase is "closed_recall": the student is working from memory. Do not reference source text in your prompts. Challenge recall only.
+- When book phase is "open_text": full source-anchoring applies. Quote source text freely when challenging.
+- When book phase is "final_compression": the student must synthesize from memory. Do not reference source text.
+- When transitioning between phases, include explicit transition language in next_prompt (e.g., "Open your text now" or "Close the text — final compression from memory").
+
+Anti-lecture reinforcement:
+- Your next_prompt must contain ONLY your question or instruction. No preamble. No "building on that..." No mini-lectures. The question is the entire turn.
+
+Rhetoric audience selection:
+- When choosing an audience for "Explain to X" moves, pick an audience consistent with the source's original context or one that creates productive friction with the argument's assumptions. Do not invert the argument.
+
 Session context:
 - Topic: {{topic.title}} ({{topic.description}})
 - Trivium stage: {{session.triviumStage}}
-- Source: {{source.title}} ({{source.sourceType}}, Tier {{source.groundingTier}})
-- Source text (if available): {{source.extractedText | truncate}}
+- Book phase: {{session.bookPhase | default: "n/a"}}
+- Source: {{source.title}} ({{source.sourceType}}, Tier {{source.groundingTier}}, preprocessing: {{source.preprocessingStatus}})
+- Source text (if available and bookPhase != "closed_recall" and bookPhase != "final_compression"): {{source.extractedText | truncate}}
