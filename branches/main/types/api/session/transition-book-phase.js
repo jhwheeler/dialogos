@@ -1,8 +1,11 @@
 import { z } from "zod";
-export const SessionTransitionApiParamsSchema = z.object({
+export const TransitionBookPhaseApiParamsSchema = z.object({
     sessionId: z.string().uuid(),
 });
-export const SessionTransitionApiOutputSchema = z.object({
+export const TransitionBookPhaseApiBodySchema = z.object({
+    targetPhase: z.enum(["closed_recall", "open_text", "final_compression"]),
+});
+export const TransitionBookPhaseApiOutputSchema = z.object({
     id: z.string().uuid(),
     topicId: z.string().uuid(),
     sourceId: z.string().uuid().nullable(),

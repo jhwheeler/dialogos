@@ -38,6 +38,25 @@ export class SourceDataSource {
                 ...(input.citation !== undefined && { citation: input.citation }),
                 ...(input.extractedText !== undefined && { extractedText: input.extractedText }),
                 ...(input.groundingTier !== undefined && { groundingTier: input.groundingTier }),
+                ...(input.preprocessingStatus !== undefined && {
+                    preprocessingStatus: input.preprocessingStatus,
+                }),
+                ...(input.preprocessingConfidence !== undefined && {
+                    preprocessingConfidence: input.preprocessingConfidence,
+                }),
+            },
+        });
+    }
+    async updatePreprocessingStatus(input) {
+        return this.prisma.source.update({
+            where: { id: input.id },
+            data: {
+                preprocessingStatus: input.preprocessingStatus,
+                ...(input.preprocessingConfidence !== undefined && {
+                    preprocessingConfidence: input.preprocessingConfidence,
+                }),
+                ...(input.extractedText !== undefined && { extractedText: input.extractedText }),
+                ...(input.groundingTier !== undefined && { groundingTier: input.groundingTier }),
             },
         });
     }

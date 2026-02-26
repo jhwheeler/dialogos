@@ -12,6 +12,8 @@ export const GetManySourceApiOutputSchema = z.object({
         citation: z.string().nullable(),
         extractedText: z.string().nullable(),
         groundingTier: z.number().int(),
+        preprocessingStatus: z.string(),
+        preprocessingConfidence: z.number().nullable(),
         createdAt: z.string().datetime(),
     })),
     count: z.number().int(),

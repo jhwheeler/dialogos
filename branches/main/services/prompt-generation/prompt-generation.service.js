@@ -52,6 +52,7 @@ export class PromptGenerationService {
             sourceCitation: source?.citation,
             sourceExtractedText: source?.extractedText,
             groundingTier: source?.groundingTier,
+            bookPhase: session.bookPhase,
             priorTurns,
         });
         const startTime = Date.now();

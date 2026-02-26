@@ -1,13 +1,16 @@
 import { NotFoundError } from "../../errors/not-found-error.js";
 import { SourceMapper } from "../../mappers/source.mapper.js";
+import { JobType } from "../../lib/queue/types.js";
 export class SourceService {
     sourceDataSource;
     topicDataSource;
     topicFileDataSource;
-    constructor(sourceDataSource, topicDataSource, topicFileDataSource) {
+    jobQueue;
+    constructor(sourceDataSource, topicDataSource, topicFileDataSource, jobQueue) {
         this.sourceDataSource = sourceDataSource;
         this.topicDataSource = topicDataSource;
         this.topicFileDataSource = topicFileDataSource;
+        this.jobQueue = jobQueue;
     }
     /**
      * Derive grounding tier based on sourceType and whether extractedText is available.
@@ -97,5 +100,49 @@ export class SourceService {
         await this.getOne({ id: input.id, studentId: input.studentId });
         const source = await this.sourceDataSource.deleteOne({ id: input.id });
         return SourceMapper.deleteOne.output.fromDataSourceToService(source);
+    }
+    async preprocessSource(input) {
+        // Verify ownership
+        await this.getOne({ id: input.id, studentId: input.studentId });
+        // Set status to "processing"
+        const updated = await this.sourceDataSource.updatePreprocessingStatus({
+            id: input.id,
+            preprocessingStatus: "processing",
+        });
+        // Enqueue the PREPROCESS_SOURCE job
+        if (this.jobQueue) {
+            await this.jobQueue.enqueue({
+                jobType: JobType.PREPROCESS_SOURCE,
+                sourceId: input.id,
+            });
+        }
+        return SourceMapper.updateOne.output.fromDataSourceToService(updated);
+    }
+    async confirmText(input) {
+        // Verify ownership
+        const existing = await this.getOne({ id: input.id, studentId: input.studentId });
+        if (existing.preprocessingStatus !== "pending_confirmation") {
+            throw new NotFoundError("Source is not in pending_confirmation status");
+        }
+        let extractedText = existing.extractedText;
+        if (!input.confirmed && input.correctedText) {
+            extractedText = input.correctedText;
+        }
+        const groundingTier = SourceService.deriveGroundingTier(existing.sourceType, extractedText ?? undefined);
+        const updated = await this.sourceDataSource.updatePreprocessingStatus({
+            id: input.id,
+            preprocessingStatus: "confirmed",
+            extractedText: extractedText ?? undefined,
+            groundingTier,
+        });
+        return SourceMapper.updateOne.output.fromDataSourceToService(updated);
+    }
+    async getPreprocessingStatus(input) {
+        // Verify ownership
+        const existing = await this.getOne({ id: input.id, studentId: input.studentId });
+        return {
+            preprocessingStatus: existing.preprocessingStatus,
+            preprocessingConfidence: existing.preprocessingConfidence,
+        };
     }
 }

@@ -17,6 +17,9 @@ async function main() {
     });
 }
 main().catch((error) => {
-    console.error(error);
+    // Node v24 util.inspect crashes on some error objects (e.g. Zod errors),
+    // so print the stack string directly instead of passing the object.
+    const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
+    console.error(message);
     process.exit(1);
 });

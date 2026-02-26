@@ -1,8 +1,11 @@
 import { z } from "zod";
-export const GetOneSourceDataSourceInputSchema = z.object({
+export const ConfirmTextSourceServiceInputSchema = z.object({
     id: z.string().uuid(),
+    studentId: z.string().uuid(),
+    confirmed: z.boolean(),
+    correctedText: z.string().optional(),
 });
-export const GetOneSourceDataSourceOutputSchema = z.object({
+export const ConfirmTextSourceServiceOutputSchema = z.object({
     id: z.string().uuid(),
     topicId: z.string().uuid(),
     topicFileId: z.string().uuid().nullable(),
@@ -11,14 +14,7 @@ export const GetOneSourceDataSourceOutputSchema = z.object({
     citation: z.string().nullable(),
     extractedText: z.string().nullable(),
     groundingTier: z.number().int(),
-    preprocessingStatus: z.enum([
-        "none",
-        "processing",
-        "pending_confirmation",
-        "confirmed",
-        "degraded",
-    ]),
+    preprocessingStatus: z.string(),
     preprocessingConfidence: z.number().nullable(),
-    createdAt: z.coerce.date(),
-    deletedAt: z.coerce.date().nullable(),
+    createdAt: z.string().datetime(),
 });

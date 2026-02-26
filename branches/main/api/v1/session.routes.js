@@ -1,4 +1,4 @@
-import { GetOneSessionApiParamsSchema, GetOneSessionApiOutputSchema, GetManySessionApiParamsSchema, GetManySessionApiOutputSchema, CreateOneSessionApiParamsSchema, CreateOneSessionApiBodySchema, CreateOneSessionApiOutputSchema, SessionTransitionApiParamsSchema, SessionTransitionApiOutputSchema, DeleteOneSessionApiParamsSchema, DeleteOneSessionApiOutputSchema, } from "../../types/api/session/index.js";
+import { GetOneSessionApiParamsSchema, GetOneSessionApiOutputSchema, GetManySessionApiParamsSchema, GetManySessionApiOutputSchema, CreateOneSessionApiParamsSchema, CreateOneSessionApiBodySchema, CreateOneSessionApiOutputSchema, SessionTransitionApiParamsSchema, SessionTransitionApiOutputSchema, DeleteOneSessionApiParamsSchema, DeleteOneSessionApiOutputSchema, TransitionBookPhaseApiParamsSchema, TransitionBookPhaseApiBodySchema, TransitionBookPhaseApiOutputSchema, } from "../../types/api/session/index.js";
 export const sessionRoutes = async (fastify) => {
     const app = fastify.withTypeProvider();
     const sessionService = fastify.container.services.session;
@@ -97,6 +97,24 @@ export const sessionRoutes = async (fastify) => {
         const serviceOutput = await sessionService.abortOne({
             id: request.params.sessionId,
             studentId: request.studentId,
+        });
+        return reply.send(serviceOutput);
+    });
+    // POST /sessions/:sessionId/transition-book-phase — advance book phase
+    app.post("/sessions/:sessionId/transition-book-phase", {
+        schema: {
+            tags: ["Sessions"],
+            security: [{ bearerAuth: [] }],
+            params: TransitionBookPhaseApiParamsSchema,
+            body: TransitionBookPhaseApiBodySchema,
+            response: { 200: TransitionBookPhaseApiOutputSchema },
+        },
+        onRequest: [fastify.authenticate],
+    }, async (request, reply) => {
+        const serviceOutput = await sessionService.transitionBookPhase({
+            id: request.params.sessionId,
+            studentId: request.studentId,
+            targetPhase: request.body.targetPhase,
         });
         return reply.send(serviceOutput);
     });

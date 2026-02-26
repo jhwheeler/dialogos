@@ -11,6 +11,14 @@ export const GetManySourceDataSourceOutputSchema = z.array(z.object({
     citation: z.string().nullable(),
     extractedText: z.string().nullable(),
     groundingTier: z.number().int(),
+    preprocessingStatus: z.enum([
+        "none",
+        "processing",
+        "pending_confirmation",
+        "confirmed",
+        "degraded",
+    ]),
+    preprocessingConfidence: z.number().nullable(),
     createdAt: z.coerce.date(),
     deletedAt: z.coerce.date().nullable(),
 }));

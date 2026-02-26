@@ -1,8 +1,13 @@
 import { z } from "zod";
-export const GetOneSourceDataSourceInputSchema = z.object({
-    id: z.string().uuid(),
+export const ConfirmTextSourceApiParamsSchema = z.object({
+    topicId: z.string().uuid(),
+    sourceId: z.string().uuid(),
 });
-export const GetOneSourceDataSourceOutputSchema = z.object({
+export const ConfirmTextSourceApiBodySchema = z.object({
+    confirmed: z.boolean(),
+    correctedText: z.string().max(50_000).optional(),
+});
+export const ConfirmTextSourceApiOutputSchema = z.object({
     id: z.string().uuid(),
     topicId: z.string().uuid(),
     topicFileId: z.string().uuid().nullable(),
@@ -11,14 +16,7 @@ export const GetOneSourceDataSourceOutputSchema = z.object({
     citation: z.string().nullable(),
     extractedText: z.string().nullable(),
     groundingTier: z.number().int(),
-    preprocessingStatus: z.enum([
-        "none",
-        "processing",
-        "pending_confirmation",
-        "confirmed",
-        "degraded",
-    ]),
+    preprocessingStatus: z.string(),
     preprocessingConfidence: z.number().nullable(),
-    createdAt: z.coerce.date(),
-    deletedAt: z.coerce.date().nullable(),
+    createdAt: z.string().datetime(),
 });

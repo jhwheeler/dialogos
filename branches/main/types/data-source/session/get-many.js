@@ -10,6 +10,7 @@ export const GetManySessionDataSourceOutputSchema = z.array(z.object({
     sourceId: z.string().uuid().nullable(),
     triviumStage: z.enum(["grammar", "logic", "rhetoric", "combined"]),
     status: z.enum(["draft", "active", "ended", "aborted"]),
+    bookPhase: z.enum(["closed_recall", "open_text", "final_compression"]).nullable(),
     startedAt: z.coerce.date().nullable(),
     endedAt: z.coerce.date().nullable(),
     costCentsEstimate: z.number().int(),

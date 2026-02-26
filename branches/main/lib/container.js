@@ -15,7 +15,7 @@ import { SessionService } from "../services/session/session.service.js";
 import { TurnDataSource } from "../data-sources/turn/turn.data-source.js";
 import { TurnService } from "../services/turn/turn.service.js";
 import { PromptGenerationService } from "../services/prompt-generation/prompt-generation.service.js";
-import { createTranscribeTurnHandler, createGeneratePromptHandler, createRenderArtifactsHandler, } from "../jobs/handlers/index.js";
+import { createTranscribeTurnHandler, createGeneratePromptHandler, createRenderArtifactsHandler, createPreprocessSourceHandler, } from "../jobs/handlers/index.js";
 export function createContainer(prisma, env) {
     // DataSources and Services are registered here as the feature slices are built.
     // Each agent adds its data source / service to this file.
@@ -47,9 +47,7 @@ export function createContainer(prisma, env) {
     dataSources.topicFile = topicFileDataSource;
     services.topicFile = topicFileService;
     const sourceDataSource = new SourceDataSource(prisma);
-    const sourceService = new SourceService(sourceDataSource, topicDataSource, topicFileDataSource);
     dataSources.source = sourceDataSource;
-    services.source = sourceService;
     // ─── Data sources needed by handlers ────────────────────────
     const turnDataSource = new TurnDataSource(prisma);
     const sessionDataSource = new SessionDataSource(prisma);
@@ -66,8 +64,11 @@ export function createContainer(prisma, env) {
     jobQueue.registerHandler(JobType.TRANSCRIBE_TURN, createTranscribeTurnHandler(turnDataSource, jobQueue, sttProvider, storage));
     jobQueue.registerHandler(JobType.GENERATE_PROMPT, createGeneratePromptHandler(turnDataSource, promptGenerationService));
     jobQueue.registerHandler(JobType.RENDER_ARTIFACTS, createRenderArtifactsHandler());
+    jobQueue.registerHandler(JobType.PREPROCESS_SOURCE, createPreprocessSourceHandler(sourceDataSource, llmProvider, storage));
     jobQueue.start();
     // ─── Services that depend on the queue ────────────────────────
+    const sourceService = new SourceService(sourceDataSource, topicDataSource, topicFileDataSource, jobQueue);
+    services.source = sourceService;
     const sessionService = new SessionService(sessionDataSource, topicDataSource, sourceDataSource, jobQueue);
     dataSources.session = sessionDataSource;
     services.session = sessionService;

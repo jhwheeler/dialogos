@@ -33,9 +33,13 @@ export function buildPromptContext(input) {
     // Sanitize current student text
     const currentStudentText = `<student_speech>${sanitizeText(input.studentText).slice(0, MAX_STUDENT_TEXT_LENGTH)}</student_speech>`;
     // Sanitize extracted text
-    const cleanExtractedText = input.sourceExtractedText
+    let cleanExtractedText = input.sourceExtractedText
         ? sanitizeText(input.sourceExtractedText).slice(0, MAX_EXTRACTED_TEXT_LENGTH)
         : undefined;
+    // Suppress source text during closed_recall and final_compression phases
+    if (input.bookPhase === "closed_recall" || input.bookPhase === "final_compression") {
+        cleanExtractedText = undefined;
+    }
     // Build system prompt
     const systemPromptConfig = {
         triviumStage: input.triviumStage,
@@ -45,6 +49,7 @@ export function buildPromptContext(input) {
         sourceCitation: input.sourceCitation ?? undefined,
         sourceExtractedText: cleanExtractedText,
         groundingTier: input.groundingTier ?? undefined,
+        bookPhase: input.bookPhase ?? undefined,
     };
     const systemMessage = buildSystemPrompt(systemPromptConfig);
     return {

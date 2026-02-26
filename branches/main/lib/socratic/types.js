@@ -15,6 +15,7 @@ export const PROMPT_TYPE_VALUES = [
     "reconcile",
     "redirect_to_student",
     "scaffold",
+    "transition",
 ];
 export const DETECTED_ISSUE_VALUES = [
     "vague_term",
