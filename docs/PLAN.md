@@ -2,6 +2,8 @@
 
 Extracted from [TECH_SPEC.md](./TECH_SPEC.md) Section 16. This document tracks the phased delivery plan; the tech spec retains all domain, architecture, and behavioral details.
 
+**Updated:** Incorporates feedback from Stromata 1.5 workshop session (February 2025). Workshop tested the oral practice method against Clement of Alexandria's text and identified improvements to session structure (open/closed book rhythm), source handling (preprocessing pipeline, graceful degradation), prompt discipline (source citation friction, anti-lecture, explicit transitions), and longer-term commonplace book features (themes, connections, session review view).
+
 ---
 
 ## Phase 0: foundations (done)
@@ -81,7 +83,7 @@ Acceptance checks:
    - Registered `TurnDataSource` and `TurnService` in `src/lib/container.ts`.
    - **Security: turn index concurrency** — Use atomic `INSERT ... SELECT MAX(index) + 1` or database sequence for turn index assignment. Handle unique constraint violations with a bounded retry (TECH_SPEC Section 6.4.6).
    - **Security: audio upload validation** — Validate audio MIME type on presigned URLs; enforce 10 MB max audio file size (TECH_SPEC Section 6.4.5).
-3. **PR-3 — Async pipeline skeleton (next)**
+3. **PR-3 — Async pipeline skeleton (done ✓)**
    - Add queue abstraction and job contracts for all three spec-defined jobs: `TRANSCRIBE_TURN`, `GENERATE_PROMPT`, and `RENDER_ARTIFACTS` (TECH_SPEC Section 9.2). Wire no-op/mock handlers for each through service orchestration. `RENDER_ARTIFACTS` handler can remain a stub until Phase 2, but the contract must exist.
    - **Security: job queue hardening** — Ensure jobs are authenticated (cannot be enqueued externally), payloads are validated, retry limits are bounded, and results are access-controlled (TECH_SPEC Section 6.4).
    - Turn status read endpoint (`GET /v1/sessions/:sessionId/turns/:turnId`) already exists from PR-2; use it for polling.
@@ -93,7 +95,12 @@ Acceptance checks:
    - Implement content question handling (TECH_SPEC Section 4.5): redirect → scaffold two-tier protocol. Detect direct content questions and respond with `redirect_to_student` on first ask, `scaffold` on repeated ask.
    - Include `triviumStage` in model context so prompt type distribution follows the selected stage (TECH_SPEC Section 4.1).
    - Persist `assistantText`, `assistantPromptType`, `assistantDetectedIssue`, `latencyMs`.
-5. **PR-5 — Basic mobile session screen integration (client)**
+5. **PR-4b — Source preprocessing + book phase + prompt discipline (workshop feedback)**
+   - Add `PREPROCESS_SOURCE` job contract + queue routing (not included in PR-3). Wire real model-based text extraction into the handler. Implement student confirmation flow (`POST /sources/:sourceId/confirm-text`). Implement graceful degradation (set Tier 3 if preprocessing fails).
+   - Book phase state machine for Combined sessions: `bookPhase` field on Session, forward-only transitions (`closed_recall → open_text → final_compression`), model context awareness (suppress source text during closed phases).
+   - Prompt discipline updates: update system prompt builder to include source citation friction instructions, anti-lecture reinforcement, audience selection guidance for Rhetoric, explicit transition language for book phase changes, and `transition` prompt type.
+   - Acceptance checks: preprocessing produces clean text from test images/PDFs; graceful degradation activates on unparseable input; book phase transitions enforce forward-only; system prompt includes phase-appropriate source text.
+6. **PR-5 — Basic mobile session screen integration (client)**
    - Wire session start/record/upload/poll/end to backend endpoints with minimal UI controls.
    - Trivium stage picker on session creation screen.
    - Source selection on session creation (link existing sources to session).
@@ -109,6 +116,9 @@ Acceptance checks:
 - **Security: replace `linkedEntryIds` UUID array with `ledger_entry_links` join table** for referential integrity (TECH_SPEC Section 6.4.8)
 - **Security: `verbatimText` is sensitive personal data** — verify encryption at rest, include in export/deletion flows
 - Ledger view per topic
+- Themes/tags system: Tag entity, session-tag linking, tag CRUD, tag browse view
+- Session Review View (commonplace book page): combine source, themes, connections, student verbatim excerpts, and coach questions into a single review artifact
+- Transcription cleanup pipeline: `CLEANUP_TRANSCRIPT` job, student settings for cleanup level (raw/light/full), raw transcript preservation alongside cleaned version
 
 ## Phase 3: spaced re-oralization
 
@@ -125,6 +135,8 @@ Acceptance checks:
 - Personal pattern detection logic
 - Trends dashboard UI
 - Argument fingerprint visualization
+- Cross-session connections: student-inputted links between sessions and ledger entries
+- Connection browse view: see all connections for a topic or across topics
 
 ## Phase 5: billing + launch polish
 
@@ -137,3 +149,17 @@ Acceptance checks:
 - Reference lookup (for known canonical texts)
 - Account export + delete
 - Markdown export for external writing workflows
+- AI-suggested connections: model-proposed cross-references based on session history and ledger entries
+- Connection suggestion UX: propose connections during session or in review, student accepts/rejects
+
+---
+
+## Architecture notes (design now, build later)
+
+The following architectural decisions should be considered during Phase 1 implementation to avoid future rewrites:
+
+1. **Tags/themes**: The Tag entity and session-tag join table should be added to the schema in Phase 1 (even if the UI is Phase 2). This avoids a migration that touches the sessions table later.
+2. **Connections**: The Connection entity (source_id, target_id, connection_type, student_id) should be designed now. Schema can be added in Phase 2.
+3. **Transcript versions**: Store raw STT output separately from any cleaned version from the start. The `session_artifacts` table already supports multiple artifact kinds per session — use `transcript_raw` and `transcript` as distinct kinds.
+4. **Book phase**: The `book_phase` column on sessions should be added in Phase 1, even for non-Combined sessions (nullable). This avoids a migration later.
+5. **Source preprocessing status**: The `preprocessing_status` and `preprocessing_confidence` columns on sources should be added in Phase 1, even before the preprocessing pipeline is wired to a real model.

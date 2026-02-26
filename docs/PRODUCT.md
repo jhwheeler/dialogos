@@ -205,17 +205,40 @@ The student must perform acts like:
 - Give one example + one implication
 - Respond to short cross-examination
 
+**Audience selection principle:** When the coach picks an audience for the "Explain to X" move, the audience should be consistent with the source's original rhetorical context, or chosen to create productive friction with the argument's assumptions. The audience should not invert the argument — the goal is to test the student's ability to translate and defend, not to make the argument unrecognizable. Example: for a patristic text, "explain to a pagan philosopher who shares some of these premises" creates more productive friction than "explain to a modern atheist teenager."
+
 ### Combined Trivium (recommended default)
 
-A guided 10–15 minute sequence that flows through all three stages:
+A guided 10–15 minute sequence that flows through all three stages, inheriting the Classical Notes alternating-book rhythm:
+
+**Phase A — Cold Recall (closed book)**
 
 1. Brief arrival / orientation
 2. Recall / retell from memory
-3. Grammar work
-4. Logic work
-5. Rhetoric work
+3. Grammar work (define, distinguish, paraphrase — all from memory)
+
+_Coach signals transition: "Open your text — we're moving to structure now."_
+
+**Phase B — Open Text (open book)**
+
+4. Logic work (with source available for verification)
+5. Rhetoric work (with source available for precision)
 6. Short cross-exam
-7. Compression + closure
+
+_Coach signals transition: "Close the text. Final compression from memory."_
+
+**Phase C — Final Compression (closed book)**
+
+7. Compression + closure (restate from memory what you now understand)
+
+**Calibration for source length:**
+
+- Short passage (a page or less): expect detailed, granular recall in Phase A.
+- Long text (a chapter or more): expect "main thread" recall only — what is the argument's spine?
+
+This alternating rhythm (closed → open → closed) inherits from the Classical Notes method. The app should enforce the book-state transitions as part of the session protocol, not leave them to the student's discretion.
+
+**Explicit transitions:** The coach must use explicit transition language when moving between stages and between book phases. This is a state-machine principle: the student should always know what phase they are in. No silent transitions.
 
 This protocol is the heart of the product.
 
@@ -242,6 +265,7 @@ This protocol is the heart of the product.
 - content-padding
 - long checklists or multi-paragraph responses
 - unsolicited teaching paragraphs
+- mini-lectures alongside questions (one question, nothing else — no "context-setting" preamble)
 
 ### Socrates Mode behavior examples
 
@@ -281,6 +305,8 @@ When the AI has access to the source material (via extracted text or knowledge o
 | Student builds argument on a passage they haven't located | "Which passage are you drawing from? Locate it." |
 
 **Anti-offloading constraint:** The AI never says "here's what the text actually means." It holds the student accountable to the text without explaining it for them.
+
+**Source citation as friction tool:** When enforcing deterministic or source-anchoring rules, the coach should cite the source directly — quote a phrase, point to a line, name a term. This is not teaching; it is creating productive friction that forces the student to engage more precisely. Example: "You said Clement hedges. I'm reading 'perhaps also' at line 12 — does that support your reading?" The citation gives the student something concrete to respond to, not an explanation to absorb.
 
 ### Source-grounding tiers
 
@@ -344,6 +370,8 @@ Waldorf influence should stay at the **session-flow level** (rhythm, recall, par
 
 Keep feedback as: (1) one concrete critique, (2) one required revision prompt. Prefer one sharp follow-up question rather than long checklists. Use session memory (source + prior answers) for relevant follow-ups.
 
+The model must not give mini-lectures alongside questions. The question is the entire turn. Any explanatory framing before or after the question violates the one-move-per-turn contract.
+
 ---
 
 ## Source Input / Context Ingestion
@@ -371,6 +399,25 @@ A Source is a semantic entity, separate from raw file storage. It may or may not
 - Optional link to TopicFile (for file-backed sources)
 
 Sessions are linked to a Source. The Source provides the grounding context for source-anchoring rules.
+
+### Source preprocessing pipeline
+
+Before a session begins, the system preprocesses the source material to produce a clean working text. This step solves several problems at once:
+
+- **Image readability**: Photos of pages may have poor OCR. The model ingests the raw image/PDF and produces clean text.
+- **Foreign language / mixed script**: Sources containing Greek, Latin, or other scripts are normalized into readable text with original terms preserved.
+- **Long-text extraction**: For lengthy documents, the pipeline produces a focused working extract (not a summary — a faithful text representation the session can anchor against).
+
+**Flow:**
+
+1. Student provides source (photo, PDF, document, voice description).
+2. System runs preprocessing: model ingests raw input and produces clean extracted text.
+3. Student reviews and confirms the extracted text before session begins ("Does this look right?").
+4. Confirmed text becomes the source's `extractedText` for grounding.
+
+**Key constraint:** The preprocessing step produces a faithful textual representation, not an interpretation or summary. It is a fidelity operation, not an analytical one.
+
+**Graceful degradation:** If the model cannot parse the source with confidence, it says so upfront: "I can't read this clearly — source fidelity is on you today." The session proceeds at a lower grounding tier (Tier 3: form-only coaching) rather than pretending to have clean text. Honesty over false confidence.
 
 ### Source library
 
@@ -442,11 +489,60 @@ The student approves or rejects each candidate by voice or minimal taps:
 
 ### What it becomes
 
-Over time, the Concept Ledger becomes the student's long-term knowledge base — a record of what they've actually said and committed to, not what the AI generated for them. This is the anti-offloading principle applied to note-taking.
+Over time, the Concept Ledger becomes the first layer of a personal commonplace book — a record of what the student has actually said and committed to, not what the AI generated for them. Combined with themes/tags and cross-session connections (see Commonplace Book Vision below), the ledger grows into a searchable, interconnected knowledge base built entirely from the student's own articulations. This is the anti-offloading principle applied to note-taking.
 
 ### Anti-cheating constraint
 
 The AI must NEVER author, rephrase, or polish ledger entries. If the student said something poorly, the ledger records it poorly. The student can revise entries in future sessions by re-articulating (which creates a new entry linked to the old one).
+
+---
+
+## Commonplace Book Vision (Themes, Connections, Session Review)
+
+The Concept Ledger is the first layer of a broader commonplace book system. Over time, the student builds not just a list of definitions and theses, but a structured, searchable, cross-referenced knowledge base — organized by their own words and their own categories.
+
+### Themes / Tags
+
+Each session can be tagged with student-defined themes. These tags build a personal index over time, allowing the student to trace threads across sessions and sources.
+
+- Tags are student-authored, not AI-generated.
+- A session can have multiple tags.
+- Tags accumulate into a browsable taxonomy personal to the student.
+- This maps directly to the commonplace book practice of indexing entries by topic.
+
+### Connections
+
+Connections are cross-references between sessions, ledger entries, and external sources. They answer the question: "How does this relate to what I've studied before?"
+
+- Initially student-inputted: the student explicitly links a session or entry to another.
+- Later AI-suggested: the model draws on previous sessions to propose connections. ("This reminds me of your session on Justin Martyr — how does Clement's claim compare?")
+- AI-suggested connections are always proposals that the student accepts or rejects, never silently applied.
+
+### Session Review View (Commonplace Book View)
+
+After a session, the student sees a review screen that functions as a commonplace book page:
+
+- **Source material**: what was studied
+- **Themes (tags)**: student-applied
+- **Connections**: links to related sessions/entries
+- **Student's own words**: verbatim excerpts from the session transcript
+- **Coach's questions**: separated from student speech (the artifact distinguishes voices clearly)
+
+This view is the unit of the growing knowledge base. Over time, the collection of session reviews becomes a searchable, interconnected record of the student's intellectual development.
+
+### Artifact ownership principle
+
+The session output reflects what the student actually said, not AI-polished versions. The coach's questions are separated from the student's responses. The artifact is the student's, not the system's. This is the anti-offloading principle applied to output: the system preserves the student's actual performance, including its roughness.
+
+### Transcription post-processing settings
+
+The student should have control over how much AI post-processing is applied to their transcribed speech. This is a spectrum:
+
+- **Raw transcript**: exactly what STT produces, errors and all.
+- **Light cleanup** (default): fix obvious transcription errors, add punctuation, normalize formatting. Does not change the student's words.
+- **Full rewrite**: AI rewrites for clarity and grammar. This is explicitly flagged as AI-modified text.
+
+The default should be the lightest touch that produces readable text. The student can adjust this preference in settings. Any AI modification beyond light cleanup must be visibly marked in the artifact, consistent with the artifact ownership principle.
 
 ---
 
@@ -517,6 +613,10 @@ Progress signals should be **descriptive, not evaluative**. "You defined terms i
 - Per-session metrics storage
 - Session review screen
 - Session transcript export (Markdown / plain text)
+- Source preprocessing pipeline (clean text extraction with student confirmation) *(workshop addition — PR-4b)*
+- Open/closed book session phases (Classical Notes alternating rhythm) *(workshop addition — PR-4b)*
+- Explicit stage transition language in coach prompts *(workshop addition — PR-4b)*
+- Graceful degradation for unreadable sources (auto-downgrade to Tier 3) *(workshop addition — PR-4b)*
 
 ### Phase 2: Concept Ledger
 
@@ -524,6 +624,9 @@ Progress signals should be **descriptive, not evaluative**. "You defined terms i
 - Approve/reject/tag/link workflow
 - Ledger view per topic
 - Ledger entry CRUD
+- Themes/tags system (student-defined session tags) *(workshop addition)*
+- Session Review View (commonplace book page per session) *(workshop addition)*
+- Transcription cleanup settings (raw / light cleanup / full rewrite spectrum) *(workshop addition)*
 
 ### Phase 3: Spaced Re-oralization
 
@@ -538,6 +641,8 @@ Progress signals should be **descriptive, not evaluative**. "You defined terms i
 - Form-based signal tracking over time
 - Personal pattern detection
 - Trends dashboard
+- Cross-session connections (student-inputted links between sessions and ledger entries) *(workshop addition)*
+- Connection browse view *(workshop addition)*
 
 ### Phase 5: Billing + Launch Polish
 
@@ -546,6 +651,7 @@ Progress signals should be **descriptive, not evaluative**. "You defined terms i
 - OCR extraction (for photo sources)
 - Reference lookup (for known texts)
 - Account export/delete
+- AI-suggested connections (model-proposed cross-references based on session history and ledger entries) *(workshop addition)*
 
 ### Explicitly deferred
 
@@ -701,15 +807,24 @@ Prompt examples:
 
 ### 6) Trivium Sequence (Combined)
 
-A guided 10-minute sequence:
+A guided 10–15 minute sequence using the Classical Notes alternating-book rhythm:
 
-1. brief arrival
-2. recall / retell
-3. grammar
-4. logic
-5. rhetoric
-6. short cross-exam
-7. compression + closure
+**Closed book:**
+1. Brief arrival
+2. Recall / retell from memory
+3. Grammar (define, distinguish, paraphrase — from memory)
+
+_"Open your text."_
+
+**Open book:**
+4. Logic (source available)
+5. Rhetoric (source available)
+6. Short cross-exam
+
+_"Close the text."_
+
+**Closed book:**
+7. Compression + closure (from memory)
 
 ---
 
@@ -723,6 +838,9 @@ A guided 10-minute sequence:
 6. **Rhythmic flow** (stable session pattern, flexible content)
 7. **Formative, not factory-style assessment**
 8. **Predictable, transparent cost** (the student should always know what a session costs and what they get for it)
+9. **Model helpfulness is the enemy** — The model wants to explain. The prompt fights this. The app architecture must constrain beyond what prompts alone can do. Structural enforcement (schema validation, word caps, banned phrases) is the defense layer.
+10. **Student pushing back = highest quality** — When the student disagrees with the coach's challenge, the session is working. The coach should not back down from productive friction.
+11. **Not an exam** — Cold recall should feel like discovery ("what stuck?"), not testing. The tone is curious, not evaluative.
 
 ---
 
@@ -818,3 +936,15 @@ This is a product differentiator, not just a billing concern. Transparent, predi
 7. **Tier 2 source accuracy**
    - How to handle cases where the AI's training knowledge of a canonical text is imprecise or edition-dependent?
    - Should we surface a disclaimer?
+
+8. **Source preprocessing model choice**
+   - Which model handles source preprocessing? Same as session model or a cheaper/faster option optimized for OCR and text extraction?
+   - How to handle very large documents (100+ pages)? Extract relevant section only, or process entire document?
+
+9. **Classical Notes rhythm calibration**
+   - How strictly should the alternating book phases be enforced? Hard state-machine transitions or soft coach suggestions?
+   - Should the student be able to override ("I want to keep the text open")?
+
+10. **Transcription cleanup default**
+    - What level of cleanup preserves the "artifact is yours" principle while remaining readable?
+    - Should cleanup level be per-session or a global setting?
