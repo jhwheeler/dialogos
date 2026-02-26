@@ -1,0 +1,208 @@
+### ============================================================
+### Dialogos API — Local Development Requests
+### ============================================================
+### Requires: VS Code REST Client or IntelliJ HTTP Client
+### Start server first: npm run dev
+### ============================================================
+
+@baseUrl = http://127.0.0.1:3000/v1
+# Generate a local dev token: node -e "const{SignJWT}=require('jose');new SignJWT({sub:'00000000-0000-0000-0000-000000000001',email:'test@example.com',user_metadata:{full_name:'Test User'},aud:'authenticated',iss:'http://127.0.0.1:54421/auth/v1',role:'authenticated',exp:Math.floor(Date.now()/1000)+86400*365}).setProtectedHeader({alg:'HS256',typ:'JWT'}).sign(new TextEncoder().encode('super-secret-jwt-token-with-at-least-32-characters-long')).then(t=>console.log(t))"
+@token = <paste-your-token-here>
+
+# Paste IDs from responses as you go:
+@topicId = {{create_topic.response.body.$.id}}
+@sourceId = {{create_source.response.body.$.id}}
+@sessionId = {{create_session.response.body.$.id}}
+
+
+### ============================================================
+### HEALTH
+### ============================================================
+
+### Health check (no auth required)
+GET http://127.0.0.1:3000/v1/health
+
+
+### ============================================================
+### TOPICS
+### ============================================================
+
+### Create a topic
+# @name create_topic
+POST {{baseUrl}}/topics
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "The Nature of Justice",
+  "description": "Exploring philosophical perspectives on justice"
+}
+
+### List topics
+GET {{baseUrl}}/topics
+Authorization: Bearer {{token}}
+
+### Get one topic
+GET {{baseUrl}}/topics/{{topicId}}
+Authorization: Bearer {{token}}
+
+### Update a topic
+PATCH {{baseUrl}}/topics/{{topicId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "The Nature of Justice (Revised)",
+  "description": "Updated description"
+}
+
+### Delete a topic (soft-delete)
+DELETE {{baseUrl}}/topics/{{topicId}}
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### SOURCES
+### ============================================================
+
+### Create a source
+# @name create_source
+POST {{baseUrl}}/topics/{{topicId}}/sources
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sourceType": "document",
+  "title": "Aristotle's Politics",
+  "citation": "Aristotle (1995). Politics. Translated by E. Baker.",
+  "extractedText": "The state is a creation of nature... Man is by nature a political animal."
+}
+
+### List sources for a topic
+GET {{baseUrl}}/topics/{{topicId}}/sources
+Authorization: Bearer {{token}}
+
+### Get one source
+GET {{baseUrl}}/topics/{{topicId}}/sources/{{sourceId}}
+Authorization: Bearer {{token}}
+
+### Update a source
+PATCH {{baseUrl}}/topics/{{topicId}}/sources/{{sourceId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Aristotle's Politics (Updated)",
+  "citation": "Aristotle (2005). Politics. Revised translation."
+}
+
+### Trigger preprocessing
+POST {{baseUrl}}/topics/{{topicId}}/sources/{{sourceId}}/preprocess
+Authorization: Bearer {{token}}
+
+### Get preprocessing status
+GET {{baseUrl}}/topics/{{topicId}}/sources/{{sourceId}}/preprocessing-status
+Authorization: Bearer {{token}}
+
+### Confirm extracted text
+POST {{baseUrl}}/topics/{{topicId}}/sources/{{sourceId}}/confirm-text
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "confirmed": true
+}
+
+### Delete a source (soft-delete)
+DELETE {{baseUrl}}/topics/{{topicId}}/sources/{{sourceId}}
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### TOPIC FILES
+### ============================================================
+
+### Presign a file upload
+POST {{baseUrl}}/topics/{{topicId}}/files/presign
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "kind": "pdf",
+  "originalName": "lecture-notes.pdf",
+  "mimeType": "application/pdf",
+  "sizeBytes": 2097152
+}
+
+### List files for a topic
+GET {{baseUrl}}/topics/{{topicId}}/files
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### SESSIONS
+### ============================================================
+
+### Create a session (draft)
+# @name create_session
+POST {{baseUrl}}/topics/{{topicId}}/sessions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sourceId": "{{sourceId}}",
+  "triviumStage": "grammar"
+}
+
+### List sessions for a topic
+GET {{baseUrl}}/topics/{{topicId}}/sessions
+Authorization: Bearer {{token}}
+
+### Get one session
+GET {{baseUrl}}/sessions/{{sessionId}}
+Authorization: Bearer {{token}}
+
+### Start session (DRAFT → ACTIVE)
+POST {{baseUrl}}/sessions/{{sessionId}}/start
+Authorization: Bearer {{token}}
+
+### Transition book phase
+POST {{baseUrl}}/sessions/{{sessionId}}/transition-book-phase
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "targetPhase": "open_text"
+}
+
+### End session (ACTIVE → ENDED)
+POST {{baseUrl}}/sessions/{{sessionId}}/end
+Authorization: Bearer {{token}}
+
+### Abort session (ACTIVE → ABORTED)
+POST {{baseUrl}}/sessions/{{sessionId}}/abort
+Authorization: Bearer {{token}}
+
+### Delete a session (soft-delete)
+DELETE {{baseUrl}}/sessions/{{sessionId}}
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### TURNS
+### ============================================================
+
+### Presign audio upload
+POST {{baseUrl}}/sessions/{{sessionId}}/turns/presign-audio
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "originalName": "response.wav",
+  "mimeType": "audio/wav",
+  "sizeBytes": 512000
+}
+
+### List turns for a session
+GET {{baseUrl}}/sessions/{{sessionId}}/turns
+Authorization: Bearer {{token}}
