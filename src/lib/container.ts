@@ -23,6 +23,7 @@ import {
   createTranscribeTurnHandler,
   createGeneratePromptHandler,
   createRenderArtifactsHandler,
+  createPreprocessSourceHandler,
 } from "../jobs/handlers/index.js";
 
 export interface AppContainer {
@@ -74,10 +75,8 @@ export function createContainer(prisma: PrismaClient, env: AppEnv): AppContainer
   services.topicFile = topicFileService;
 
   const sourceDataSource = new SourceDataSource(prisma);
-  const sourceService = new SourceService(sourceDataSource, topicDataSource, topicFileDataSource);
 
   dataSources.source = sourceDataSource;
-  services.source = sourceService;
 
   // ─── Data sources needed by handlers ────────────────────────
   const turnDataSource = new TurnDataSource(prisma);
@@ -111,10 +110,21 @@ export function createContainer(prisma: PrismaClient, env: AppEnv): AppContainer
     createGeneratePromptHandler(turnDataSource, promptGenerationService),
   );
   jobQueue.registerHandler(JobType.RENDER_ARTIFACTS, createRenderArtifactsHandler());
+  jobQueue.registerHandler(
+    JobType.PREPROCESS_SOURCE,
+    createPreprocessSourceHandler(sourceDataSource, llmProvider, storage),
+  );
 
   jobQueue.start();
 
   // ─── Services that depend on the queue ────────────────────────
+  const sourceService = new SourceService(
+    sourceDataSource,
+    topicDataSource,
+    topicFileDataSource,
+    jobQueue,
+  );
+  services.source = sourceService;
   const sessionService = new SessionService(
     sessionDataSource,
     topicDataSource,

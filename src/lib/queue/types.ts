@@ -5,6 +5,7 @@ export const JobType = {
   TRANSCRIBE_TURN: "TRANSCRIBE_TURN",
   GENERATE_PROMPT: "GENERATE_PROMPT",
   RENDER_ARTIFACTS: "RENDER_ARTIFACTS",
+  PREPROCESS_SOURCE: "PREPROCESS_SOURCE",
 } as const;
 
 export type JobType = (typeof JobType)[keyof typeof JobType];
@@ -28,11 +29,18 @@ export const RenderArtifactsPayloadSchema = z.object({
 });
 export type RenderArtifactsPayload = z.infer<typeof RenderArtifactsPayloadSchema>;
 
+export const PreprocessSourcePayloadSchema = z.object({
+  jobType: z.literal(JobType.PREPROCESS_SOURCE),
+  sourceId: z.string().uuid(),
+});
+export type PreprocessSourcePayload = z.infer<typeof PreprocessSourcePayloadSchema>;
+
 // ─── Discriminated union of all payloads ─────────────────────
 export const JobPayloadSchema = z.discriminatedUnion("jobType", [
   TranscribeTurnPayloadSchema,
   GeneratePromptPayloadSchema,
   RenderArtifactsPayloadSchema,
+  PreprocessSourcePayloadSchema,
 ]);
 export type JobPayload = z.infer<typeof JobPayloadSchema>;
 
@@ -43,7 +51,9 @@ export type PayloadForJobType<T extends JobType> = T extends "TRANSCRIBE_TURN"
     ? GeneratePromptPayload
     : T extends "RENDER_ARTIFACTS"
       ? RenderArtifactsPayload
-      : never;
+      : T extends "PREPROCESS_SOURCE"
+        ? PreprocessSourcePayload
+        : never;
 
 // ─── Handler interface ───────────────────────────────────────
 export type JobHandler = (payload: JobPayload) => Promise<void>;

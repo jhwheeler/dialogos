@@ -13,6 +13,8 @@ import type {
   AbortOneSessionServiceOutput,
   DeleteOneSessionServiceInput,
   DeleteOneSessionServiceOutput,
+  TransitionBookPhaseSessionServiceInput,
+  TransitionBookPhaseSessionServiceOutput,
 } from "../../types/service/session/index.js";
 import { NotFoundError } from "../../errors/not-found-error.js";
 import { ConflictError } from "../../errors/conflict-error.js";
@@ -111,6 +113,15 @@ export class SessionService {
       throw new ConflictError("Cannot start session: invalid current status");
     }
 
+    // Combined sessions start in closed_recall book phase
+    if (updated.triviumStage === "combined") {
+      const withPhase = await this.sessionDataSource.updateOne({
+        id: input.id,
+        bookPhase: "closed_recall",
+      });
+      return SessionMapper.startOne.output.fromDataSourceToService(withPhase);
+    }
+
     return SessionMapper.startOne.output.fromDataSourceToService(updated);
   }
 
@@ -156,6 +167,38 @@ export class SessionService {
     }
 
     return SessionMapper.abortOne.output.fromDataSourceToService(updated);
+  }
+
+  public async transitionBookPhase(
+    input: TransitionBookPhaseSessionServiceInput,
+  ): Promise<TransitionBookPhaseSessionServiceOutput> {
+    const session = await this.getOne({ id: input.id, studentId: input.studentId });
+
+    // Only Combined sessions have book phases
+    if (session.triviumStage !== "combined") {
+      throw new ConflictError("Book phase transitions only apply to Combined sessions");
+    }
+
+    // Enforce forward-only transitions
+    const phaseOrder = ["closed_recall", "open_text", "final_compression"];
+    const currentIndex = session.bookPhase ? phaseOrder.indexOf(session.bookPhase) : -1;
+    const targetIndex = phaseOrder.indexOf(input.targetPhase);
+
+    if (targetIndex <= currentIndex) {
+      throw new ConflictError("Book phase can only transition forward");
+    }
+
+    // Must be exactly one step forward
+    if (targetIndex !== currentIndex + 1) {
+      throw new ConflictError("Book phase must transition to the next phase in sequence");
+    }
+
+    const updated = await this.sessionDataSource.updateOne({
+      id: input.id,
+      bookPhase: input.targetPhase,
+    });
+
+    return SessionMapper.getOne.output.fromDataSourceToService(updated);
   }
 
   public async deleteOne(

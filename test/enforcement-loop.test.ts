@@ -193,6 +193,24 @@ describe("Enforcement loop", () => {
     expect(result.nextPrompt).toBe("Define the concept of justice here.");
   });
 
+  it("accepts 'transition' prompt type in enforcement loop", async () => {
+    const transitionOutput: SocraticOutput = {
+      nextPrompt: "Opening the text now.",
+      promptType: "transition",
+      detectedIssue: "none",
+      stopReason: "ok_continue",
+    };
+    const llm = createMockLlm([transitionOutput]);
+    const context: PromptContext = {
+      systemMessage: "test",
+      conversationHistory: [],
+      currentStudentText: "test",
+    };
+
+    const result = await runEnforcementLoop(llm, context);
+    expect(result.promptType).toBe("transition");
+  });
+
   it("rejects empty nextPrompt", async () => {
     const empty: SocraticOutput = {
       ...VALID_OUTPUT,
@@ -451,6 +469,18 @@ describe("buildPromptContext", () => {
     expect(context.systemMessage).toContain("Ethics 101");
     expect(context.systemMessage).toContain("Intro to ethics");
     expect(context.systemMessage).toContain("Grammar stage");
+  });
+
+  it("accepts 'transition' prompt type", () => {
+    const context = buildPromptContext({
+      studentText: "test",
+      triviumStage: "combined",
+      topicTitle: "Test",
+      priorTurns: [],
+    });
+
+    // The system prompt should include 'transition' in the prompt_type list
+    expect(context.systemMessage).toContain("transition");
   });
 
   it("skips turns with null studentText", () => {

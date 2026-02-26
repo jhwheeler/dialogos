@@ -1,13 +1,15 @@
 import { z } from "zod";
 
-export const GetOneSourceServiceInputSchema = z.object({
+export const ConfirmTextSourceServiceInputSchema = z.object({
   id: z.string().uuid(),
   studentId: z.string().uuid(),
+  confirmed: z.boolean(),
+  correctedText: z.string().optional(),
 });
 
-export type GetOneSourceServiceInput = z.infer<typeof GetOneSourceServiceInputSchema>;
+export type ConfirmTextSourceServiceInput = z.infer<typeof ConfirmTextSourceServiceInputSchema>;
 
-export const GetOneSourceServiceOutputSchema = z.object({
+export const ConfirmTextSourceServiceOutputSchema = z.object({
   id: z.string().uuid(),
   topicId: z.string().uuid(),
   topicFileId: z.string().uuid().nullable(),
@@ -21,4 +23,4 @@ export const GetOneSourceServiceOutputSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
-export type GetOneSourceServiceOutput = z.infer<typeof GetOneSourceServiceOutputSchema>;
+export type ConfirmTextSourceServiceOutput = z.infer<typeof ConfirmTextSourceServiceOutputSchema>;

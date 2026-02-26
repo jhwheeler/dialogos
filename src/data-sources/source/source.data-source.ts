@@ -61,6 +61,32 @@ export class SourceDataSource {
         ...(input.citation !== undefined && { citation: input.citation }),
         ...(input.extractedText !== undefined && { extractedText: input.extractedText }),
         ...(input.groundingTier !== undefined && { groundingTier: input.groundingTier }),
+        ...(input.preprocessingStatus !== undefined && {
+          preprocessingStatus: input.preprocessingStatus,
+        }),
+        ...(input.preprocessingConfidence !== undefined && {
+          preprocessingConfidence: input.preprocessingConfidence,
+        }),
+      },
+    });
+  }
+
+  public async updatePreprocessingStatus(input: {
+    id: string;
+    preprocessingStatus: "none" | "processing" | "pending_confirmation" | "confirmed" | "degraded";
+    preprocessingConfidence?: number | null;
+    extractedText?: string;
+    groundingTier?: number;
+  }): Promise<UpdateOneSourceDataSourceOutput> {
+    return this.prisma.source.update({
+      where: { id: input.id },
+      data: {
+        preprocessingStatus: input.preprocessingStatus,
+        ...(input.preprocessingConfidence !== undefined && {
+          preprocessingConfidence: input.preprocessingConfidence,
+        }),
+        ...(input.extractedText !== undefined && { extractedText: input.extractedText }),
+        ...(input.groundingTier !== undefined && { groundingTier: input.groundingTier }),
       },
     });
   }

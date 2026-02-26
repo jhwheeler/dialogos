@@ -19,6 +19,8 @@ export interface PromptBuilderInput {
   sourceExtractedText?: string | null;
   /** Source grounding tier (1, 2, or 3). */
   groundingTier?: number | null;
+  /** Current book phase for combined sessions. */
+  bookPhase?: string | null;
   /** Prior turns for this session (already ordered by index). */
   priorTurns: PriorTurn[];
   /** Max number of prior turns to include. Default: 6. */
@@ -72,9 +74,14 @@ export function buildPromptContext(input: PromptBuilderInput): PromptContext {
   const currentStudentText = `<student_speech>${sanitizeText(input.studentText).slice(0, MAX_STUDENT_TEXT_LENGTH)}</student_speech>`;
 
   // Sanitize extracted text
-  const cleanExtractedText = input.sourceExtractedText
+  let cleanExtractedText = input.sourceExtractedText
     ? sanitizeText(input.sourceExtractedText).slice(0, MAX_EXTRACTED_TEXT_LENGTH)
     : undefined;
+
+  // Suppress source text during closed_recall and final_compression phases
+  if (input.bookPhase === "closed_recall" || input.bookPhase === "final_compression") {
+    cleanExtractedText = undefined;
+  }
 
   // Build system prompt
   const systemPromptConfig: SystemPromptConfig = {
@@ -85,6 +92,7 @@ export function buildPromptContext(input: PromptBuilderInput): PromptContext {
     sourceCitation: input.sourceCitation ?? undefined,
     sourceExtractedText: cleanExtractedText,
     groundingTier: input.groundingTier ?? undefined,
+    bookPhase: input.bookPhase ?? undefined,
   };
 
   const systemMessage = buildSystemPrompt(systemPromptConfig);

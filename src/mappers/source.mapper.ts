@@ -16,6 +16,8 @@ function sourceFromDataSourceToService(
     citation: input.citation,
     extractedText: input.extractedText,
     groundingTier: input.groundingTier,
+    preprocessingStatus: input.preprocessingStatus,
+    preprocessingConfidence: input.preprocessingConfidence,
     createdAt: input.createdAt.toISOString(),
   };
 }

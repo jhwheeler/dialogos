@@ -17,6 +17,7 @@ export const PROMPT_TYPE_VALUES = [
   "reconcile",
   "redirect_to_student",
   "scaffold",
+  "transition",
 ] as const;
 
 export type PromptType = (typeof PROMPT_TYPE_VALUES)[number];

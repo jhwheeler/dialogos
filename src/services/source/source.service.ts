@@ -9,18 +9,27 @@ import type {
   UpdateOneSourceServiceOutput,
   DeleteOneSourceServiceInput,
   DeleteOneSourceServiceOutput,
+  PreprocessOneSourceServiceInput,
+  PreprocessOneSourceServiceOutput,
+  ConfirmTextSourceServiceInput,
+  ConfirmTextSourceServiceOutput,
+  GetPreprocessingStatusServiceInput,
+  GetPreprocessingStatusServiceOutput,
 } from "../../types/service/source/index.js";
 import { NotFoundError } from "../../errors/not-found-error.js";
 import { SourceDataSource } from "../../data-sources/source/source.data-source.js";
 import { TopicDataSource } from "../../data-sources/topic/topic.data-source.js";
 import { TopicFileDataSource } from "../../data-sources/topic-file/topic-file.data-source.js";
 import { SourceMapper } from "../../mappers/source.mapper.js";
+import type { JobQueue } from "../../lib/queue/job-queue.js";
+import { JobType } from "../../lib/queue/types.js";
 
 export class SourceService {
   public constructor(
     private readonly sourceDataSource: SourceDataSource,
     private readonly topicDataSource: TopicDataSource,
     private readonly topicFileDataSource: TopicFileDataSource,
+    private readonly jobQueue?: JobQueue,
   ) {}
 
   /**
@@ -146,5 +155,71 @@ export class SourceService {
     const source = await this.sourceDataSource.deleteOne({ id: input.id });
 
     return SourceMapper.deleteOne.output.fromDataSourceToService(source);
+  }
+
+  public async preprocessSource(
+    input: PreprocessOneSourceServiceInput,
+  ): Promise<PreprocessOneSourceServiceOutput> {
+    // Verify ownership
+    await this.getOne({ id: input.id, studentId: input.studentId });
+
+    // Set status to "processing"
+    const updated = await this.sourceDataSource.updatePreprocessingStatus({
+      id: input.id,
+      preprocessingStatus: "processing",
+    });
+
+    // Enqueue the PREPROCESS_SOURCE job
+    if (this.jobQueue) {
+      await this.jobQueue.enqueue({
+        jobType: JobType.PREPROCESS_SOURCE,
+        sourceId: input.id,
+      });
+    }
+
+    return SourceMapper.updateOne.output.fromDataSourceToService(updated);
+  }
+
+  public async confirmText(
+    input: ConfirmTextSourceServiceInput,
+  ): Promise<ConfirmTextSourceServiceOutput> {
+    // Verify ownership
+    const existing = await this.getOne({ id: input.id, studentId: input.studentId });
+
+    if (existing.preprocessingStatus !== "pending_confirmation") {
+      throw new NotFoundError("Source is not in pending_confirmation status");
+    }
+
+    let extractedText = existing.extractedText;
+    if (!input.confirmed && input.correctedText) {
+      extractedText = input.correctedText;
+    }
+
+    const groundingTier = SourceService.deriveGroundingTier(
+      existing.sourceType as "photo_ocr" | "document" | "reference" | "voice_summary",
+      extractedText ?? undefined,
+    );
+
+    const updated = await this.sourceDataSource.updatePreprocessingStatus({
+      id: input.id,
+      preprocessingStatus: "confirmed",
+      extractedText: extractedText ?? undefined,
+      groundingTier,
+    });
+
+    return SourceMapper.updateOne.output.fromDataSourceToService(updated);
+  }
+
+  public async getPreprocessingStatus(
+    input: GetPreprocessingStatusServiceInput,
+  ): Promise<GetPreprocessingStatusServiceOutput> {
+    // Verify ownership
+    const existing = await this.getOne({ id: input.id, studentId: input.studentId });
+
+    return {
+      preprocessingStatus:
+        existing.preprocessingStatus as GetPreprocessingStatusServiceOutput["preprocessingStatus"],
+      preprocessingConfidence: existing.preprocessingConfidence,
+    };
   }
 }

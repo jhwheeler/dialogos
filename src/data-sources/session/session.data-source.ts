@@ -46,6 +46,7 @@ export class SessionDataSource {
         sourceId: input.sourceId,
         triviumStage: input.triviumStage,
         status: input.status,
+        ...(input.bookPhase !== undefined && { bookPhase: input.bookPhase }),
       },
     });
   }
@@ -59,6 +60,7 @@ export class SessionDataSource {
         ...(input.status !== undefined && { status: input.status }),
         ...(input.startedAt !== undefined && { startedAt: input.startedAt }),
         ...(input.endedAt !== undefined && { endedAt: input.endedAt }),
+        ...(input.bookPhase !== undefined && { bookPhase: input.bookPhase }),
       },
     });
   }

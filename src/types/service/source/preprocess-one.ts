@@ -1,13 +1,13 @@
 import { z } from "zod";
 
-export const GetOneSourceServiceInputSchema = z.object({
+export const PreprocessOneSourceServiceInputSchema = z.object({
   id: z.string().uuid(),
   studentId: z.string().uuid(),
 });
 
-export type GetOneSourceServiceInput = z.infer<typeof GetOneSourceServiceInputSchema>;
+export type PreprocessOneSourceServiceInput = z.infer<typeof PreprocessOneSourceServiceInputSchema>;
 
-export const GetOneSourceServiceOutputSchema = z.object({
+export const PreprocessOneSourceServiceOutputSchema = z.object({
   id: z.string().uuid(),
   topicId: z.string().uuid(),
   topicFileId: z.string().uuid().nullable(),
@@ -21,4 +21,6 @@ export const GetOneSourceServiceOutputSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
-export type GetOneSourceServiceOutput = z.infer<typeof GetOneSourceServiceOutputSchema>;
+export type PreprocessOneSourceServiceOutput = z.infer<
+  typeof PreprocessOneSourceServiceOutputSchema
+>;

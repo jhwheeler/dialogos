@@ -33,6 +33,20 @@ enum SourceType {
   voice_summary
 }
 
+enum PreprocessingStatus {
+  none
+  processing
+  pending_confirmation
+  confirmed
+  degraded
+}
+
+enum BookPhase {
+  closed_recall
+  open_text
+  final_compression
+}
+
 enum Strictness {
   low
   medium
@@ -100,9 +114,11 @@ model Source {
   title         String
   citation      String?
   extractedText String?    @map("extracted_text")
-  groundingTier Int        @default(3) @map("grounding_tier")
-  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  deletedAt     DateTime?  @map("deleted_at") @db.Timestamptz(6)
+  groundingTier            Int                 @default(3) @map("grounding_tier")
+  preprocessingStatus      PreprocessingStatus @default(none) @map("preprocessing_status")
+  preprocessingConfidence  Float?              @map("preprocessing_confidence")
+  createdAt                DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  deletedAt                DateTime?           @map("deleted_at") @db.Timestamptz(6)
 
   topic     Topic      @relation(fields: [topicId], references: [id])
   topicFile TopicFile? @relation(fields: [topicFileId], references: [id])
@@ -118,6 +134,7 @@ model Session {
   sourceId          String?       @map("source_id") @db.Uuid
   triviumStage      TriviumStage  @default(combined) @map("trivium_stage")
   status            SessionStatus
+  bookPhase         BookPhase?    @map("book_phase")
   startedAt         DateTime?     @map("started_at") @db.Timestamptz(6)
   endedAt           DateTime?     @map("ended_at") @db.Timestamptz(6)
   costCentsEstimate Int           @default(0) @map("cost_cents_estimate")

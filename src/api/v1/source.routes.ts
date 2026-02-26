@@ -14,6 +14,13 @@ import {
   UpdateOneSourceApiOutputSchema,
   DeleteOneSourceApiParamsSchema,
   DeleteOneSourceApiOutputSchema,
+  PreprocessSourceApiParamsSchema,
+  PreprocessSourceApiOutputSchema,
+  ConfirmTextSourceApiParamsSchema,
+  ConfirmTextSourceApiBodySchema,
+  ConfirmTextSourceApiOutputSchema,
+  PreprocessingStatusApiParamsSchema,
+  PreprocessingStatusApiOutputSchema,
 } from "../../types/api/source/index.js";
 
 export const sourceRoutes: FastifyPluginAsync = async (fastify) => {
@@ -126,6 +133,74 @@ export const sourceRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       const serviceOutput = await sourceService.deleteOne({
+        id: request.params.sourceId,
+        studentId: request.studentId,
+      });
+
+      return reply.send(serviceOutput);
+    },
+  );
+
+  // POST /topics/:topicId/sources/:sourceId/preprocess — trigger preprocessing
+  app.post(
+    "/topics/:topicId/sources/:sourceId/preprocess",
+    {
+      schema: {
+        tags: ["Sources"],
+        security: [{ bearerAuth: [] }],
+        params: PreprocessSourceApiParamsSchema,
+        response: { 200: PreprocessSourceApiOutputSchema },
+      },
+      onRequest: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      const serviceOutput = await sourceService.preprocessSource({
+        id: request.params.sourceId,
+        studentId: request.studentId,
+      });
+
+      return reply.send(serviceOutput);
+    },
+  );
+
+  // POST /topics/:topicId/sources/:sourceId/confirm-text — confirm/reject extracted text
+  app.post(
+    "/topics/:topicId/sources/:sourceId/confirm-text",
+    {
+      schema: {
+        tags: ["Sources"],
+        security: [{ bearerAuth: [] }],
+        params: ConfirmTextSourceApiParamsSchema,
+        body: ConfirmTextSourceApiBodySchema,
+        response: { 200: ConfirmTextSourceApiOutputSchema },
+      },
+      onRequest: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      const serviceOutput = await sourceService.confirmText({
+        id: request.params.sourceId,
+        studentId: request.studentId,
+        ...request.body,
+      });
+
+      return reply.send(serviceOutput);
+    },
+  );
+
+  // GET /topics/:topicId/sources/:sourceId/preprocessing-status — get preprocessing status
+  app.get(
+    "/topics/:topicId/sources/:sourceId/preprocessing-status",
+    {
+      schema: {
+        tags: ["Sources"],
+        security: [{ bearerAuth: [] }],
+        params: PreprocessingStatusApiParamsSchema,
+        response: { 200: PreprocessingStatusApiOutputSchema },
+      },
+      onRequest: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      const serviceOutput = await sourceService.getPreprocessingStatus({
         id: request.params.sourceId,
         studentId: request.studentId,
       });

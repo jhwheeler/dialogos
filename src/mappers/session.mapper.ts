@@ -13,6 +13,7 @@ function sessionFromDataSourceToService(
     sourceId: input.sourceId,
     triviumStage: input.triviumStage,
     status: input.status,
+    bookPhase: input.bookPhase,
     startedAt: input.startedAt?.toISOString() ?? null,
     endedAt: input.endedAt?.toISOString() ?? null,
     createdAt: input.createdAt.toISOString(),

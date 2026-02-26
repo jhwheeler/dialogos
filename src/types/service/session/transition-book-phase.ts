@@ -1,13 +1,16 @@
 import { z } from "zod";
 
-export const EndOneSessionServiceInputSchema = z.object({
+export const TransitionBookPhaseSessionServiceInputSchema = z.object({
   id: z.string().uuid(),
   studentId: z.string().uuid(),
+  targetPhase: z.enum(["closed_recall", "open_text", "final_compression"]),
 });
 
-export type EndOneSessionServiceInput = z.infer<typeof EndOneSessionServiceInputSchema>;
+export type TransitionBookPhaseSessionServiceInput = z.infer<
+  typeof TransitionBookPhaseSessionServiceInputSchema
+>;
 
-export const EndOneSessionServiceOutputSchema = z.object({
+export const TransitionBookPhaseSessionServiceOutputSchema = z.object({
   id: z.string().uuid(),
   topicId: z.string().uuid(),
   sourceId: z.string().uuid().nullable(),
@@ -19,4 +22,6 @@ export const EndOneSessionServiceOutputSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
-export type EndOneSessionServiceOutput = z.infer<typeof EndOneSessionServiceOutputSchema>;
+export type TransitionBookPhaseSessionServiceOutput = z.infer<
+  typeof TransitionBookPhaseSessionServiceOutputSchema
+>;

@@ -1,13 +1,20 @@
 import { z } from "zod";
 
-export const GetOneSourceApiParamsSchema = z.object({
+export const ConfirmTextSourceApiParamsSchema = z.object({
   topicId: z.string().uuid(),
   sourceId: z.string().uuid(),
 });
 
-export type GetOneSourceApiParams = z.infer<typeof GetOneSourceApiParamsSchema>;
+export type ConfirmTextSourceApiParams = z.infer<typeof ConfirmTextSourceApiParamsSchema>;
 
-export const GetOneSourceApiOutputSchema = z.object({
+export const ConfirmTextSourceApiBodySchema = z.object({
+  confirmed: z.boolean(),
+  correctedText: z.string().max(50_000).optional(),
+});
+
+export type ConfirmTextSourceApiBody = z.infer<typeof ConfirmTextSourceApiBodySchema>;
+
+export const ConfirmTextSourceApiOutputSchema = z.object({
   id: z.string().uuid(),
   topicId: z.string().uuid(),
   topicFileId: z.string().uuid().nullable(),
@@ -21,4 +28,4 @@ export const GetOneSourceApiOutputSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
-export type GetOneSourceApiOutput = z.infer<typeof GetOneSourceApiOutputSchema>;
+export type ConfirmTextSourceApiOutput = z.infer<typeof ConfirmTextSourceApiOutputSchema>;

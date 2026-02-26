@@ -6,6 +6,7 @@ export interface SystemPromptConfig {
   sourceExtractedText?: string;
   topicTitle: string;
   topicDescription?: string;
+  bookPhase?: string;
 }
 
 export function buildSystemPrompt(config: SystemPromptConfig): string {
@@ -24,7 +25,8 @@ export function buildSystemPrompt(config: SystemPromptConfig): string {
   parts.push(`OUTPUT FORMAT:
 You MUST respond using the socratic_response tool/function with these fields:
 - next_prompt: Your one-sentence response to the student (max 12 words). This is the ONLY thing the student hears.
-- prompt_type: One of: define, distinguish, premise, inference, objection, compress, clarify, example, scope, contradiction, locate_passage, reconcile, redirect_to_student, scaffold.
+- prompt_type: One of: define, distinguish, premise, inference, objection, compress, clarify, example, scope, contradiction, locate_passage, reconcile, redirect_to_student, scaffold, transition.
+  - transition: Use when signaling a book phase change. Announce the shift clearly.
 - detected_issue: One of: vague_term, missing_premise, equivocation, drift, contradiction, unclear_referent, unsupported_claim, unsupported_by_source, contradicts_source, misattribution, content_request, none.
 - stop_reason: One of: needs_definition, needs_example, needs_premise, needs_scope, needs_source_evidence, ok_continue.`);
 
@@ -32,6 +34,11 @@ You MUST respond using the socratic_response tool/function with these fields:
   parts.push(`SESSION CONTEXT:
 - Topic: ${config.topicTitle}${config.topicDescription ? `\n- Topic description: ${config.topicDescription}` : ""}
 - Trivium stage: ${config.triviumStage}`);
+
+  // ─── Book phase awareness ──────────────────────────────────
+  if (config.bookPhase) {
+    parts.push(buildBookPhaseSection(config.bookPhase));
+  }
 
   // ─── Trivium stage emphasis ─────────────────────────────────
   parts.push(buildTriviumEmphasis(config.triviumStage));
@@ -63,7 +70,9 @@ When the student asks a direct question about the source material (summary, expl
 - NEVER use praise words: great, perfect, awesome, excellent, nice job, good job, love, well done, brilliant, fantastic, wonderful, amazing, impressive.
 - No recap unless student explicitly asks.
 - No unsolicited teaching paragraphs.
-- Prefer one sharp follow-up question over long checklists.`);
+- Prefer one sharp follow-up question over long checklists.
+- NEVER lecture. If you catch yourself explaining, STOP. Convert to a question.
+- If the student asks for explanation, redirect: ask them to attempt it first.`);
 
   return parts.join("\n\n");
 }
@@ -83,11 +92,25 @@ Preferred prompt_types: premise, inference, objection, contradiction, distinguis
     case "rhetoric":
       return `TRIVIUM EMPHASIS (Rhetoric stage):
 Focus on expression and compression: push for concise restatement, strong formulations, addressing objections persuasively. The student should be able to articulate their position with economy and force.
+The student should consider their audience. Ask: Who are you addressing? What objection would they raise?
 Preferred prompt_types: compress, objection, scope, distinguish.`;
 
     default:
       return `TRIVIUM EMPHASIS (Combined stage):
 All moves are available. Use the move that best matches the student's current need. Start with grammar-level moves if the student hasn't established basic definitions, escalate to logic and rhetoric as appropriate.`;
+  }
+}
+
+function buildBookPhaseSection(bookPhase: string): string {
+  switch (bookPhase) {
+    case "closed_recall":
+      return "BOOK PHASE: Closed recall — the student is working from memory. Do NOT reference or quote the source text. Test what they remember. If they're stuck, prompt them to recall, don't provide the text.";
+    case "open_text":
+      return "BOOK PHASE: Open text — the student now has access to the source. Use locate_passage and reconcile prompt types. Hold them to the text.";
+    case "final_compression":
+      return "BOOK PHASE: Final compression — the student must compress their argument into a final formulation without the text. Do NOT reference source text. Push for concise, powerful restatement.";
+    default:
+      return "";
   }
 }
 
@@ -116,7 +139,9 @@ function buildSourceAnchoring(config: SystemPromptConfig): string {
 3. Student presents a conclusion as the source's without evidence → prompt_type: "distinguish", detected_issue: "misattribution". Ask: "Is that the author's claim or yours?"
 4. Student builds argument on a passage they haven't located → prompt_type: "locate_passage", detected_issue: "unsupported_by_source". Ask: "Which passage are you drawing from?"
 
-ANTI-OFFLOADING: Never say "here's what the text actually means." Hold the student accountable without explaining.`);
+ANTI-OFFLOADING: Never say "here's what the text actually means." Hold the student accountable without explaining.
+
+CITATION FRICTION: When the student attributes a claim to the source, always demand the specific passage or page. Never accept vague references like 'the author says' without location.`);
 
   return parts.join("\n");
 }
